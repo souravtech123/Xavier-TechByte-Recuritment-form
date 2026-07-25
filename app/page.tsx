@@ -15,8 +15,8 @@ const page = () => {
   <Navbar />
   <Hero />
   <About/>
-  <Leadership/>
   <MentorMessage/>
+  <Leadership/>
   <OurEvents/>
   <SupportSection/>
   <Footer/>

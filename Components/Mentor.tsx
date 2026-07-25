@@ -1,94 +1,175 @@
-import { Quote } from "lucide-react";
-import img1 from '../assets/Sir_Photo.png'
-import Image from "next/image";
+"use client";
 
-const MentorMessage = () => {
+import Image from "next/image";
+import { Quote } from "lucide-react";
+import img1 from "../assets/Sir_Image.png";
+
+export default function MentorMessage() {
   return (
     <section
-      id="mentor-message"
-      className="relative overflow-hidden bg-[#030712] py-24"
+      id="mentor"
+      className="relative overflow-hidden bg-[#020617] py-36"
     >
-      {/* Background Glow */}
-      <div className="absolute -left-32 top-20 h-96 w-96 rounded-full bg-violet-600/10 blur-[140px]" />
-      <div className="absolute -right-32 bottom-10 h-96 w-96 rounded-full bg-cyan-500/10 blur-[140px]" />
+      {/* Background */}
+
+      <div className="absolute inset-0">
+
+        {/* Grid */}
+
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,.03)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,.03)_1px,transparent_1px)] bg-[size:50px_50px]" />
+
+        {/* Purple Glow */}
+
+        <div className="absolute -left-24 top-0 h-[500px] w-[500px] rounded-full bg-violet-600/20 blur-[170px]" />
+
+        {/* Cyan Glow */}
+
+        <div className="absolute -right-24 bottom-0 h-[500px] w-[500px] rounded-full bg-cyan-500/20 blur-[170px]" />
+
+      </div>
 
       <div className="relative mx-auto max-w-7xl px-6">
+
         {/* Heading */}
+
         <div className="text-center">
-          <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-4 py-2 text-sm font-medium text-violet-300">
-            Faculty Mentor
+
+          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-5 py-2 text-sm font-medium tracking-wider text-violet-300">
+            FACULTY MENTOR
           </span>
 
-          <h2 className="mt-6 text-4xl font-black text-white md:text-6xl">
-            A Message From Our
+          <h2 className="mt-8 text-5xl font-black leading-tight text-white md:text-7xl">
+
+            A Message That
+
             <span className="bg-gradient-to-r from-violet-400 via-fuchsia-400 to-cyan-400 bg-clip-text text-transparent">
               {" "}
-              Mentor
+              Inspires
             </span>
+
           </h2>
 
-          <p className="mx-auto mt-5 max-w-2xl text-lg text-slate-400">
-            Guidance, inspiration, and a shared vision for innovation and
-            excellence.
-          </p>
         </div>
 
-        {/* Content */}
-        <div className="mt-20 grid items-center gap-16 lg:grid-cols-2">
-          {/* Image */}
-          <div className="flex justify-center">
-            <div className="relative">
-              <div className="absolute inset-0 rounded-3xl bg-gradient-to-r from-violet-600/30 to-cyan-500/30 blur-3xl" />
+        {/* Hero Quote */}
 
-              <Image
-                src={img1}
-                alt="Faculty Mentor"
-                className="relative h-[500px] w-[380px] rounded-3xl border border-white/10 object-cover shadow-2xl"
-              />
-            </div>
-          </div>
+        <div className="relative mx-auto mt-28 max-w-5xl text-center">
 
-          {/* Message */}
-          <div className="rounded-3xl border border-white/10 bg-white/5 p-10 backdrop-blur-xl">
-            <Quote
-              size={48}
-              className="mb-6 text-violet-400"
-            />
+          <Quote
+            size={120}
+            className="absolute -left-10 -top-10 text-violet-500/15"
+          />
 
-            <p className="text-lg leading-9 text-slate-300">
-              Technology is not just about writing code—it is about solving
-              real-world problems, working as a team, and continuously learning.
-              Xavier TechByte Society provides students with a platform to
-              explore their creativity, develop practical skills, and transform
-              innovative ideas into meaningful solutions.
-            </p>
+          <h3 className="text-4xl font-light leading-relaxed text-white md:text-6xl">
 
-            <p className="mt-6 text-lg leading-9 text-slate-300">
-              I encourage every student to take initiative, embrace challenges,
-              collaborate with peers, and make the most of every opportunity.
-              The experience you gain here will shape your confidence,
-              leadership, and future career.
-            </p>
+            Technology is not just about writing code.
 
-            {/* Mentor Details */}
-            <div className="mt-10 border-t border-white/10 pt-6">
-              <h3 className="text-2xl font-bold text-white">
-                Dr. Kamadeep
-              </h3>
+            <br />
 
-              <p className="mt-1 text-violet-400">
-                Faculty Mentor
-              </p>
+            It is about building people
 
-              <p className="mt-2 text-slate-400">
-                Department of Computer Applications
-              </p>
-            </div>
-          </div>
+            <br />
+
+            who solve real-world problems.
+
+          </h3>
+
         </div>
-      </div>
-    </section>
-  );
-};
 
-export default MentorMessage;
+        <div className="mx-auto mt-20 h-px w-40 bg-gradient-to-r from-violet-500 via-cyan-400 to-violet-500" />
+        <div className="mt-24 grid items-start gap-20 lg:grid-cols-[430px_1fr]">
+
+{/* Portrait */}
+
+<div className="relative">
+
+  <div className="absolute inset-0 rounded-[40px] bg-gradient-to-r from-violet-500/20 to-cyan-500/20 blur-3xl" />
+
+  <div className="relative overflow-hidden rounded-[40px] border border-white/10 bg-white/5 p-3">
+
+    <Image
+      src={img1}
+      alt="Faculty Mentor"
+      className="h-[560px] w-full rounded-[30px] object-cover transition duration-700 hover:scale-105"
+    />
+
+  </div>
+
+</div>
+
+{/* Editorial */}
+
+<div>
+
+  <p className="text-2xl leading-10 text-white">
+
+    Technology is not just about learning programming languages.
+    It is about developing the ability to think critically,
+    innovate fearlessly, and create meaningful solutions that
+    positively impact society.
+
+  </p>
+
+  <p className="mt-10 text-lg leading-9 text-slate-400">
+
+    Xavier TechByte Society provides students with an environment
+    where ideas transform into real-world projects. Through
+    collaboration, innovation, hackathons, workshops and practical
+    experiences, students build not only technical expertise but
+    also leadership, confidence and teamwork.
+
+  </p>
+
+  <p className="mt-8 text-lg leading-9 text-slate-400">
+
+    I encourage every student to remain curious, embrace challenges,
+    work together and continue learning beyond the classroom.
+    The experiences you gain today will shape your future and
+    prepare you to become tomorrow's innovators and leaders.
+
+  </p>
+  <div className="mt-14">
+
+<div className="h-px w-28 bg-gradient-to-r from-violet-500 to-cyan-500" />
+
+<h3 className="mt-8 text-3xl font-bold text-white">
+
+  Dr. Kamadeep
+
+</h3>
+
+<p className="mt-2 text-violet-400">
+
+  Faculty Mentor
+
+</p>
+
+<p className="mt-1 text-slate-500">
+
+  Department of Computer Applications
+
+</p>
+
+</div>
+
+</div>
+
+</div>
+
+{/* Bottom Quote */}
+
+<div className="mt-32 text-center">
+
+<p className="text-3xl font-light italic text-slate-400">
+
+"The future belongs to those who never stop learning."
+
+</p>
+
+</div>
+
+</div>
+
+</section>
+);
+}
