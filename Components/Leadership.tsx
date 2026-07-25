@@ -1,5 +1,5 @@
 "use client";
-
+import type { StaticImageData } from "next/image";
 import Image from "next/image";
 import { Mail } from "lucide-react";
 import img3 from '../assets/Prachi.png'
@@ -13,7 +13,7 @@ import img9 from '../assets/Krish.png'
 interface Leader {
   name: string;
   role: string;
-  image: string;
+  image: StaticImageData;
   email?: string;
   linkedin?: string;
   github?: string;
@@ -150,6 +150,7 @@ export default function Leadership() {
                 src={president.image}
                 alt={president.name}
                 fill
+                sizes="192px"
                 className="object-cover"
               />
 
