@@ -10,7 +10,7 @@ export default function About() {
   return (
     <section
       id="about"
-      className="relative overflow-hidden bg-[#020617] py-32"
+      className="relative overflow-hidden bg-[#020617] py-20 md:py-32"
     >
       {/* Background */}
 
@@ -24,19 +24,19 @@ export default function About() {
 
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
 
         {/* Heading */}
 
         <div className="mx-auto max-w-4xl text-center">
 
-          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-5 py-2 text-sm text-violet-300">
+          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-4 sm:px-5 py-2 text-xs sm:text-sm text-violet-300">
 
             ABOUT XAVIER TECHBYTE SOCIETY
 
           </span>
 
-          <h2 className="mt-8 text-5xl font-black leading-tight text-white md:text-7xl">
+          <h2 className="mt-6 sm:mt-8 text-4xl sm:text-5xl font-black leading-tight text-white md:text-7xl">
 
             BUILD.
 
@@ -51,7 +51,7 @@ export default function About() {
 
           </h2>
 
-          <p className="mx-auto mt-8 max-w-3xl text-lg leading-9 text-slate-300">
+          <p className="mx-auto mt-6 sm:mt-8 max-w-3xl text-base sm:text-lg leading-7 sm:leading-9 text-slate-300">
 
             Xavier TechByte Society is a student-led technology community where
             passionate students collaborate, build real-world products,
@@ -64,7 +64,7 @@ export default function About() {
 
         {/* Content */}
 
-        <div className="mt-24 grid items-center gap-20 lg:grid-cols-2">
+        <div className="mt-16 sm:mt-24 grid items-center gap-12 lg:gap-20 lg:grid-cols-2">
 
           {/* Left */}
 
@@ -72,13 +72,13 @@ export default function About() {
 
             <div>
 
-              <h3 className="text-3xl font-bold text-white">
+              <h3 className="text-2xl sm:text-3xl font-bold text-white">
 
                 Our Mission
 
               </h3>
 
-              <p className="mt-5 text-lg leading-9 text-slate-400">
+              <p className="mt-4 sm:mt-5 text-base sm:text-lg leading-7 sm:leading-9 text-slate-400">
 
                 Create an environment where students learn by building,
                 collaborate on impactful projects and develop the confidence
@@ -88,15 +88,15 @@ export default function About() {
 
             </div>
 
-            <div className="mt-14">
+            <div className="mt-10 sm:mt-14">
 
-              <h3 className="text-3xl font-bold text-white">
+              <h3 className="text-2xl sm:text-3xl font-bold text-white">
 
                 Our Vision
 
               </h3>
 
-              <p className="mt-5 text-lg leading-9 text-slate-400">
+              <p className="mt-4 sm:mt-5 text-base sm:text-lg leading-7 sm:leading-9 text-slate-400">
 
                 Become one of India's most inspiring student technology
                 communities by fostering innovation, leadership and continuous
@@ -114,12 +114,12 @@ export default function About() {
 
             <div className="absolute -inset-4 rounded-[40px] bg-gradient-to-r from-violet-500/20 to-cyan-500/20 blur-3xl" />
 
-            <div className="relative overflow-hidden rounded-[40px] border border-white/10">
+            <div className="relative overflow-hidden rounded-[32px] sm:rounded-[40px] border border-white/10">
 
               <Image
                 src={img2}
                 alt="Students"
-                className="h-[550px] w-full object-cover transition duration-700 hover:scale-105"
+                className="h-[260px] sm:h-[380px] lg:h-[550px] w-full object-cover transition duration-700 hover:scale-105"
               />
         
             </div>
@@ -127,10 +127,6 @@ export default function About() {
           </div>
 
         </div>
-
-        {/* Stats */}
-
-       
 
       </div>
 

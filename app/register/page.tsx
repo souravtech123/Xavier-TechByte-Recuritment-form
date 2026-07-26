@@ -111,6 +111,10 @@ const INTEREST_OPTIONS: SelectOption[] = [
   { label: "Cyber Security", icon: Shield },
   { label: "Marketing", icon: Megaphone },
   { label: "Content Writing", icon: PenLine },
+  { label: "Photography", icon: PenLine },
+  { label: "Video Editing", icon: PenLine },
+  { label: "Social Media Managment", icon: PenLine  },
+  { label: "Event Managment", icon: PenLine },
 ];
 
 const STEPS: StepConfig[] = [
@@ -725,7 +729,7 @@ function SuccessScreen({ onRestart }: { onRestart: () => void }) {
           Return Home
         </button>
         <a
-          href="#"
+          href="https://chat.whatsapp.com/I863BRNmBbP2jf7V860EFG?s=cl&p=a&ilr=4&amv=2"
           className="rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:scale-[1.02]"
         >
           Join WhatsApp Community

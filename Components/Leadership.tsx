@@ -54,7 +54,7 @@ const heads: Leader[] = [
   {
     name: "Krish Kumar",
     role: "Executive SubHead",
-    image: img9 ,
+    image: img9,
   },
 ];
 
@@ -66,18 +66,18 @@ function HeadCard({ member }: { member: Leader }) {
         <Image
           src={member.image}
           alt={member.name}
-          width={140}
-          height={140}
-          className="h-36 w-36 object-cover transition duration-500 group-hover:scale-110"
+          width={120}
+          height={120}
+          className="h-28 w-28 sm:h-36 sm:w-36 object-cover transition duration-500 group-hover:scale-110"
         />
 
       </div>
 
-      <h3 className="mt-5 text-xl font-semibold text-white">
+      <h3 className="mt-4 sm:mt-5 text-base sm:text-xl font-semibold text-white">
         {member.name}
       </h3>
 
-      <p className="mt-1 text-violet-400">
+      <p className="mt-1 text-sm sm:text-base text-violet-400">
         {member.role}
       </p>
     </div>
@@ -88,7 +88,7 @@ export default function Leadership() {
   return (
     <section
       id="leadership"
-      className="relative overflow-hidden bg-[#020617] py-32"
+      className="relative overflow-hidden bg-[#020617] py-20 md:py-32"
     >
       {/* Background */}
 
@@ -102,19 +102,19 @@ export default function Leadership() {
 
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
 
         {/* Heading */}
 
         <div className="mx-auto max-w-3xl text-center">
 
-          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-5 py-2 text-sm text-violet-300">
+          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-4 sm:px-5 py-2 text-xs sm:text-sm text-violet-300">
 
             LEADERSHIP TEAM
 
           </span>
 
-          <h2 className="mt-8 text-5xl font-black text-white md:text-7xl">
+          <h2 className="mt-6 sm:mt-8 text-4xl sm:text-5xl font-black text-white md:text-7xl">
 
             Meet the
 
@@ -129,7 +129,7 @@ export default function Leadership() {
 
           </h2>
 
-          <p className="mx-auto mt-8 max-w-2xl text-lg leading-9 text-slate-400">
+          <p className="mx-auto mt-6 sm:mt-8 max-w-2xl text-base sm:text-lg leading-7 sm:leading-9 text-slate-400">
 
             A passionate team of students dedicated to building an innovative,
             collaborative and future-ready technology community.
@@ -140,35 +140,35 @@ export default function Leadership() {
 
         {/* President */}
 
-        <div className="mt-24 flex justify-center">
+        <div className="mt-16 sm:mt-24 flex justify-center">
 
-          <div className="w-full max-w-md rounded-[36px] border border-white/10 bg-white/5 p-10 text-center backdrop-blur-xl">
+          <div className="w-full max-w-sm sm:max-w-md rounded-[28px] sm:rounded-[36px] border border-white/10 bg-white/5 p-6 sm:p-10 text-center backdrop-blur-xl">
 
-            <div className="relative mx-auto h-48 w-48 overflow-hidden rounded-full border-4 border-violet-500/20">
+            <div className="relative mx-auto h-36 w-36 sm:h-48 sm:w-48 overflow-hidden rounded-full border-4 border-violet-500/20">
 
               <Image
                 src={president.image}
                 alt={president.name}
                 fill
-                sizes="192px"
+                sizes="(max-width: 640px) 144px, 192px"
                 className="object-cover"
               />
 
             </div>
 
-            <h3 className="mt-8 text-4xl font-bold text-white">
+            <h3 className="mt-6 sm:mt-8 text-3xl sm:text-4xl font-bold text-white">
 
               {president.name}
 
             </h3>
 
-            <p className="mt-2 text-xl text-violet-400">
+            <p className="mt-2 text-lg sm:text-xl text-violet-400">
 
               {president.role}
 
             </p>
 
-            <p className="mt-6 leading-8 text-slate-400">
+            <p className="mt-4 sm:mt-6 text-sm sm:text-base leading-7 sm:leading-8 text-slate-400">
 
               Leading Xavier TechByte Society with a vision of innovation,
               collaboration, practical learning and empowering every student
@@ -176,13 +176,11 @@ export default function Leadership() {
 
             </p>
 
-            <div className="mt-8 flex justify-center gap-4">
+            <div className="mt-6 sm:mt-8 flex justify-center gap-4">
 
               <button className="rounded-full border border-white/10 bg-white/5 p-3 transition hover:bg-violet-600">
                 <Mail size={18} className="text-white" />
               </button>
-
-              
 
              
 
@@ -192,7 +190,7 @@ export default function Leadership() {
 
         </div>
 
-        {/* Connection */}
+        {/* Connection line — desktop only */}
 
         <div className="relative mx-auto mt-16 hidden w-full max-w-5xl lg:block">
 
@@ -204,7 +202,7 @@ export default function Leadership() {
 
         {/* Heads */}
 
-        <div className="mt-16 grid gap-10 sm:grid-cols-2 lg:grid-cols-5">
+        <div className="mt-10 sm:mt-16 grid gap-8 sm:gap-10 grid-cols-3 sm:grid-cols-3 lg:grid-cols-5">
 
           {heads.map((member) => (
             <HeadCard

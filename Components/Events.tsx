@@ -76,7 +76,7 @@ const OurJourney = () => {
   return (
     <section
       id="events"
-      className="relative overflow-hidden bg-[#030712] py-32"
+      className="relative overflow-hidden bg-[#030712] py-20 md:py-32"
     >
       {/* Background */}
 
@@ -90,19 +90,19 @@ const OurJourney = () => {
 
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
 
         {/* Heading */}
 
         <div className="text-center">
 
-          <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-5 py-2 text-sm tracking-wider text-violet-300">
+          <span className="rounded-full border border-violet-500/20 bg-violet-500/10 px-4 sm:px-5 py-2 text-xs sm:text-sm tracking-wider text-violet-300">
 
             OUR JOURNEY
 
           </span>
 
-          <h2 className="mt-8 text-5xl font-black text-white md:text-7xl">
+          <h2 className="mt-6 sm:mt-8 text-4xl sm:text-5xl font-black text-white md:text-7xl">
 
             Every Event Creates
 
@@ -113,7 +113,7 @@ const OurJourney = () => {
 
           </h2>
 
-          <p className="mx-auto mt-6 max-w-3xl text-lg leading-8 text-slate-400">
+          <p className="mx-auto mt-4 sm:mt-6 max-w-3xl text-base sm:text-lg leading-7 sm:leading-8 text-slate-400">
 
             Every hackathon, workshop and seminar represents another milestone
             in building an innovative student community.
@@ -124,11 +124,11 @@ const OurJourney = () => {
 
         {/* Year */}
 
-        <div className="mt-24 flex justify-center">
+        <div className="mt-12 sm:mt-24 flex justify-center">
 
-          <div className="rounded-full border border-white/10 bg-white/5 px-10 py-4 backdrop-blur-xl">
+          <div className="rounded-full border border-white/10 bg-white/5 px-8 sm:px-10 py-3 sm:py-4 backdrop-blur-xl">
 
-            <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-6xl font-black text-transparent">
+            <span className="bg-gradient-to-r from-violet-400 to-cyan-400 bg-clip-text text-4xl sm:text-6xl font-black text-transparent">
 
               2024-26
 
@@ -138,13 +138,77 @@ const OurJourney = () => {
 
         </div>
 
-        {/* Timeline */}
+        {/* ============================================
+            MOBILE TIMELINE (visible on < lg)
+        ============================================ */}
+        <div className="relative mt-16 lg:hidden">
 
-        <div className="relative mt-28">
+          {/* Left vertical line */}
+          <div className="absolute left-5 top-0 h-full w-[2px] bg-gradient-to-b from-violet-500 via-cyan-400 to-violet-500" />
+
+          <div className="space-y-10">
+            {events.map((event, index) => (
+              <div key={event.title} className="relative flex gap-6 pl-14">
+
+                {/* Timeline dot */}
+                <div className="absolute left-0 top-1 z-10">
+                  <div className="absolute inset-0 rounded-full bg-violet-500/30 blur-md" />
+                  <div className="relative flex h-10 w-10 items-center justify-center rounded-full border border-violet-400/30 bg-[#0B1120]">
+                    <div className="h-3.5 w-3.5 rounded-full bg-gradient-to-r from-violet-500 to-cyan-400" />
+                  </div>
+                </div>
+
+                {/* Card */}
+                <div className="flex-1 rounded-2xl border border-white/10 bg-white/[0.03] p-5 backdrop-blur-sm">
+
+                  {/* Index badge */}
+                  <span className="inline-block rounded-full border border-violet-500/20 bg-violet-500/10 px-2.5 py-0.5 text-xs font-medium text-violet-400 mb-3">
+                    {String(index + 1).padStart(2, "0")}
+                  </span>
+
+                  <h3 className="text-xl font-bold text-white leading-tight">
+                    {event.title}
+                  </h3>
+
+                  <p className="mt-3 text-sm leading-6 text-slate-400">
+                    {event.description}
+                  </p>
+
+                  <div className="mt-4 flex flex-col gap-2">
+
+                    <div className="flex items-center gap-2 text-slate-300 text-sm">
+                      <CalendarDays size={14} className="flex-shrink-0 text-violet-400" />
+                      {event.date}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-slate-300 text-sm">
+                      <MapPin size={14} className="flex-shrink-0 text-cyan-400" />
+                      {event.location}
+                    </div>
+
+                    <div className="flex items-center gap-2 text-slate-300 text-sm">
+                      <Users size={14} className="flex-shrink-0 text-fuchsia-400" />
+                      {event.participants}
+                    </div>
+
+                  </div>
+
+                </div>
+
+              </div>
+            ))}
+          </div>
+
+        </div>
+
+        {/* ============================================
+            DESKTOP TIMELINE (visible on lg+)
+        ============================================ */}
+        <div className="relative mt-28 hidden lg:block">
 
           {/* Center Line */}
 
-          <div className="absolute left-1/2 top-0 hidden h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-violet-500 via-cyan-400 to-violet-500 lg:block" />
+          <div className="absolute left-1/2 top-0 h-full w-[2px] -translate-x-1/2 bg-gradient-to-b from-violet-500 via-cyan-400 to-violet-500" />
 
           <div className="space-y-28">
           {events.map((event, index) => {
@@ -240,7 +304,7 @@ return (
 
     </div>
 
-    {/* TIMELINE */}
+    {/* TIMELINE DOT */}
 
     <div className="relative z-20 mx-auto lg:mx-0">
 
@@ -344,10 +408,6 @@ return (
 <div className="pointer-events-none absolute bottom-0 left-1/2 hidden h-32 w-32 -translate-x-1/2 rounded-full bg-gradient-to-b from-transparent to-[#030712] lg:block" />
 
 </div>
-
-{/* Journey Statistics */}
-
-
 
 </div>
 

@@ -8,7 +8,7 @@ export default function MentorMessage() {
   return (
     <section
       id="mentor"
-      className="relative overflow-hidden bg-[#020617] py-36"
+      className="relative overflow-hidden bg-[#020617] py-20 md:py-36"
     >
       {/* Background */}
 
@@ -28,17 +28,17 @@ export default function MentorMessage() {
 
       </div>
 
-      <div className="relative mx-auto max-w-7xl px-6">
+      <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
 
         {/* Heading */}
 
         <div className="text-center">
 
-          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-5 py-2 text-sm font-medium tracking-wider text-violet-300">
+          <span className="rounded-full border border-violet-500/30 bg-violet-500/10 px-4 sm:px-5 py-2 text-xs sm:text-sm font-medium tracking-wider text-violet-300">
             FACULTY MENTOR
           </span>
 
-          <h2 className="mt-8 text-5xl font-black leading-tight text-white md:text-7xl">
+          <h2 className="mt-6 sm:mt-8 text-4xl sm:text-5xl font-black leading-tight text-white md:text-7xl">
 
             A Message That
 
@@ -53,22 +53,29 @@ export default function MentorMessage() {
 
         {/* Hero Quote */}
 
-        <div className="relative mx-auto mt-28 max-w-5xl text-center">
+        <div className="relative mx-auto mt-16 sm:mt-28 max-w-5xl text-center px-2 sm:px-0">
 
+          {/* Quote icon hidden on mobile to avoid overflow */}
           <Quote
-            size={120}
-            className="absolute -left-10 -top-10 text-violet-500/15"
+            size={80}
+            className="absolute -left-2 sm:-left-10 -top-6 sm:-top-10 text-violet-500/15 hidden sm:block"
+          />
+          <Quote
+            size={40}
+            className="absolute -left-1 -top-4 text-violet-500/15 sm:hidden"
           />
 
-          <h3 className="text-4xl font-light leading-relaxed text-white md:text-6xl">
+          <h3 className="text-2xl sm:text-4xl font-light leading-relaxed text-white md:text-5xl lg:text-6xl">
 
             Technology is not just about writing code.
 
-            <br />
+            <br className="hidden sm:block" />
+            <span className="sm:hidden"> </span>
 
             It is about building people
 
-            <br />
+            <br className="hidden sm:block" />
+            <span className="sm:hidden"> </span>
 
             who solve real-world problems.
 
@@ -76,100 +83,102 @@ export default function MentorMessage() {
 
         </div>
 
-        <div className="mx-auto mt-20 h-px w-40 bg-gradient-to-r from-violet-500 via-cyan-400 to-violet-500" />
-        <div className="mt-24 grid items-start gap-20 lg:grid-cols-[430px_1fr]">
+        <div className="mx-auto mt-12 sm:mt-20 h-px w-40 bg-gradient-to-r from-violet-500 via-cyan-400 to-violet-500" />
 
-{/* Portrait */}
+        <div className="mt-16 sm:mt-24 grid items-start gap-12 sm:gap-20 lg:grid-cols-[430px_1fr]">
 
-<div className="relative">
+          {/* Portrait */}
 
-  <div className="absolute inset-0 rounded-[40px] bg-gradient-to-r from-violet-500/20 to-cyan-500/20 blur-3xl" />
+          <div className="relative">
 
-  <div className="relative overflow-hidden rounded-[40px] border border-white/10 bg-white/5 p-3">
+            <div className="absolute inset-0 rounded-[40px] bg-gradient-to-r from-violet-500/20 to-cyan-500/20 blur-3xl" />
 
-    <Image
-      src={img1}
-      alt="Faculty Mentor"
-      className="h-[560px] w-full rounded-[30px] object-cover transition duration-700 hover:scale-105"
-    />
+            <div className="relative overflow-hidden rounded-[32px] sm:rounded-[40px] border border-white/10 bg-white/5 p-2 sm:p-3">
 
-  </div>
+              <Image
+                src={img1}
+                alt="Faculty Mentor"
+                className="h-[300px] sm:h-[420px] lg:h-[560px] w-full rounded-[26px] sm:rounded-[30px] object-cover transition duration-700 hover:scale-105"
+              />
 
-</div>
+            </div>
 
-{/* Editorial */}
+          </div>
 
-<div>
+          {/* Editorial */}
 
-  <p className="text-2xl leading-10 text-white">
+          <div>
 
-    Technology is not just about learning programming languages.
-    It is about developing the ability to think critically,
-    innovate fearlessly, and create meaningful solutions that
-    positively impact society.
+            <p className="text-xl sm:text-2xl leading-8 sm:leading-10 text-white">
 
-  </p>
+              Technology is not just about learning programming languages.
+              It is about developing the ability to think critically,
+              innovate fearlessly, and create meaningful solutions that
+              positively impact society.
 
-  <p className="mt-10 text-lg leading-9 text-slate-400">
+            </p>
 
-    Xavier TechByte Society provides students with an environment
-    where ideas transform into real-world projects. Through
-    collaboration, innovation, hackathons, workshops and practical
-    experiences, students build not only technical expertise but
-    also leadership, confidence and teamwork.
+            <p className="mt-8 sm:mt-10 text-base sm:text-lg leading-7 sm:leading-9 text-slate-400">
 
-  </p>
+              Xavier TechByte Society provides students with an environment
+              where ideas transform into real-world projects. Through
+              collaboration, innovation, hackathons, workshops and practical
+              experiences, students build not only technical expertise but
+              also leadership, confidence and teamwork.
 
-  <p className="mt-8 text-lg leading-9 text-slate-400">
+            </p>
 
-    I encourage every student to remain curious, embrace challenges,
-    work together and continue learning beyond the classroom.
-    The experiences you gain today will shape your future and
-    prepare you to become tomorrow's innovators and leaders.
+            <p className="mt-6 sm:mt-8 text-base sm:text-lg leading-7 sm:leading-9 text-slate-400">
 
-  </p>
-  <div className="mt-14">
+              I encourage every student to remain curious, embrace challenges,
+              work together and continue learning beyond the classroom.
+              The experiences you gain today will shape your future and
+              prepare you to become tomorrow's innovators and leaders.
 
-<div className="h-px w-28 bg-gradient-to-r from-violet-500 to-cyan-500" />
+            </p>
 
-<h3 className="mt-8 text-3xl font-bold text-white">
+            <div className="mt-10 sm:mt-14">
 
-  Dr. Kamadeep
+              <div className="h-px w-28 bg-gradient-to-r from-violet-500 to-cyan-500" />
 
-</h3>
+              <h3 className="mt-6 sm:mt-8 text-2xl sm:text-3xl font-bold text-white">
 
-<p className="mt-2 text-violet-400">
+                Dr. Kamadeep
 
-  Faculty Mentor
+              </h3>
 
-</p>
+              <p className="mt-2 text-violet-400">
 
-<p className="mt-1 text-slate-500">
+                Faculty Mentor
 
-  Department of Computer Applications
+              </p>
 
-</p>
+              <p className="mt-1 text-slate-500">
 
-</div>
+                Department of Computer Applications
 
-</div>
+              </p>
 
-</div>
+            </div>
 
-{/* Bottom Quote */}
+          </div>
 
-<div className="mt-32 text-center">
+        </div>
 
-<p className="text-3xl font-light italic text-slate-400">
+        {/* Bottom Quote */}
 
-"The future belongs to those who never stop learning."
+        <div className="mt-20 sm:mt-32 text-center px-4 sm:px-0">
 
-</p>
+          <p className="text-xl sm:text-3xl font-light italic text-slate-400">
 
-</div>
+            "The future belongs to those who never stop learning."
 
-</div>
+          </p>
 
-</section>
-);
+        </div>
+
+      </div>
+
+    </section>
+  );
 }

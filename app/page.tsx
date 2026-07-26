@@ -11,8 +11,9 @@ import Footer from '@/Components/Footer'
 const page = () => {
   return (
     <>
+    <Navbar />
 <div className="min-h-screen bg-[#030712] text-white">
-  <Navbar />
+  
   <Hero />
   <About/>
   <MentorMessage/>
