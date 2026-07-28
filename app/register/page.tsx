@@ -729,7 +729,7 @@ function SuccessScreen({ onRestart }: { onRestart: () => void }) {
           Return Home
         </button>
         <a
-          href="https://chat.whatsapp.com/I863BRNmBbP2jf7V860EFG?s=cl&p=a&ilr=4&amv=2"
+          href=""
           className="rounded-xl bg-gradient-to-r from-emerald-500 to-cyan-500 px-6 py-3 text-sm font-semibold text-white shadow-lg shadow-emerald-900/30 transition hover:scale-[1.02]"
         >
           Join WhatsApp Community
