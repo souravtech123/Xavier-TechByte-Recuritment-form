@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/config/db";
 import Registration from "@/model/register";
+import { sendConfirmationEmail } from "@/config/mailer";
 
 // GET /api/registration — fetch all registrations (admin)
 export async function GET(req: NextRequest) {
@@ -98,6 +99,13 @@ export async function POST(req: Request) {
       whyJoin,
       portfolio,
     });
+
+    // Send confirmation email (non-blocking – failure won't break registration)
+    try {
+      await sendConfirmationEmail(email, fullName);
+    } catch (mailError) {
+      console.error("Failed to send confirmation email:", mailError);
+    }
 
     return NextResponse.json(
       {
