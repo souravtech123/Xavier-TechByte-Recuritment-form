@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/config/db";
 import Registration from "@/model/register";
-import { sendConfirmationEmail } from "@/config/mailer";
+import crypto from "crypto";
 
 // GET /api/registration — fetch all registrations (admin)
 export async function GET(req: NextRequest) {
@@ -64,13 +64,8 @@ export async function POST(req: Request) {
       !skills
     ) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Please fill all required fields.",
-        },
-        {
-          status: 400,
-        }
+        { success: false, message: "Please fill all required fields." },
+        { status: 400 }
       );
     }
 
@@ -78,15 +73,13 @@ export async function POST(req: Request) {
 
     if (existing) {
       return NextResponse.json(
-        {
-          success: false,
-          message: "Application already submitted.",
-        },
-        {
-          status: 409,
-        }
+        { success: false, message: "Application already submitted." },
+        { status: 409 }
       );
     }
+
+    // Generate a unique QR token for this participant
+    const qrToken = crypto.randomUUID();
 
     const application = await Registration.create({
       fullName,
@@ -98,14 +91,9 @@ export async function POST(req: Request) {
       skills,
       whyJoin,
       portfolio,
+      qrToken,
+      verified: false,
     });
-
-    // Send confirmation email (non-blocking – failure won't break registration)
-    try {
-      await sendConfirmationEmail(email, fullName);
-    } catch (mailError) {
-      console.error("Failed to send confirmation email:", mailError);
-    }
 
     return NextResponse.json(
       {
@@ -113,21 +101,13 @@ export async function POST(req: Request) {
         message: "Application submitted successfully.",
         data: application,
       },
-      {
-        status: 201,
-      }
+      { status: 201 }
     );
   } catch (error) {
     console.error(error);
-
     return NextResponse.json(
-      {
-        success: false,
-        message: "Internal Server Error",
-      },
-      {
-        status: 500,
-      }
+      { success: false, message: "Internal Server Error" },
+      { status: 500 }
     );
   }
 }

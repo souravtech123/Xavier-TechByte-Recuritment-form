@@ -11,6 +11,8 @@ export interface IRegistration extends Document {
   whyJoin?: string;
   portfolio?: string;
   status: "Pending" | "Selected" | "Rejected";
+  qrToken?: string;
+  verified: boolean;
   createdAt: Date;
 }
 
@@ -69,6 +71,17 @@ const RegistrationSchema = new Schema<IRegistration>(
       type: String,
       enum: ["Pending", "Selected", "Rejected"],
       default: "Pending",
+    },
+
+    qrToken: {
+      type: String,
+      unique: true,
+      sparse: true,
+    },
+
+    verified: {
+      type: Boolean,
+      default: false,
     },
   },
   {

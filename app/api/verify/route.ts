@@ -1,0 +1,121 @@
+import { NextRequest, NextResponse } from "next/server";
+import { connectDB } from "@/config/db";
+import Registration from "@/model/register";
+
+// GET /api/verify?token=<qrToken> — look up a participant by token
+export async function GET(req: NextRequest) {
+  try {
+    await connectDB();
+
+    const { searchParams } = new URL(req.url);
+    const token = searchParams.get("token");
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Token is required." },
+        { status: 400 }
+      );
+    }
+
+    const registration = await Registration.findOne({ qrToken: token });
+
+    if (!registration) {
+      return NextResponse.json(
+        { success: false, message: "Invalid QR code. Participant not found." },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      success: true,
+      data: {
+        _id: registration._id,
+        fullName: registration.fullName,
+        email: registration.email,
+        phone: registration.phone,
+        course: registration.course,
+        semester: registration.semester,
+        interest: registration.interest,
+        skills: registration.skills,
+        status: registration.status,
+        verified: registration.verified,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { success: false, message: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}
+
+// POST /api/verify — mark a participant as verified (checked in for interview)
+export async function POST(req: Request) {
+  try {
+    await connectDB();
+
+    const body = await req.json();
+    const { token } = body;
+
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Token is required." },
+        { status: 400 }
+      );
+    }
+
+    const registration = await Registration.findOne({ qrToken: token });
+
+    if (!registration) {
+      return NextResponse.json(
+        { success: false, message: "Invalid QR code. Participant not found." },
+        { status: 404 }
+      );
+    }
+
+    if (registration.verified) {
+      return NextResponse.json({
+        success: true,
+        alreadyVerified: true,
+        data: {
+          _id: registration._id,
+          fullName: registration.fullName,
+          course: registration.course,
+          semester: registration.semester,
+          interest: registration.interest,
+          skills: registration.skills,
+          status: registration.status,
+          verified: registration.verified,
+        },
+      });
+    }
+
+    const updated = await Registration.findOneAndUpdate(
+      { qrToken: token },
+      { verified: true },
+      { new: true }
+    );
+
+    return NextResponse.json({
+      success: true,
+      alreadyVerified: false,
+      data: {
+        _id: updated!._id,
+        fullName: updated!.fullName,
+        course: updated!.course,
+        semester: updated!.semester,
+        interest: updated!.interest,
+        skills: updated!.skills,
+        status: updated!.status,
+        verified: updated!.verified,
+      },
+    });
+  } catch (error) {
+    console.error(error);
+    return NextResponse.json(
+      { success: false, message: "Internal Server Error" },
+      { status: 500 }
+    );
+  }
+}

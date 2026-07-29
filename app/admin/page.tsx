@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Search,
   Plus,
@@ -27,6 +28,10 @@ import {
   Link2,
   MessageSquare,
   Shield,
+  QrCode,
+  Download,
+  Share2,
+  ShieldCheck,
 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
@@ -45,12 +50,14 @@ interface Registration {
   whyJoin?: string;
   portfolio?: string;
   status: "Pending" | "Selected" | "Rejected";
+  qrToken?: string;
+  verified: boolean;
   createdAt: string;
 }
 
 type StatusFilter = "All" | "Pending" | "Selected" | "Rejected";
 
-const EMPTY_FORM: Omit<Registration, "_id" | "createdAt"> = {
+const EMPTY_FORM: Omit<Registration, "_id" | "createdAt" | "verified"> = {
   fullName: "",
   email: "",
   phone: "",
@@ -61,30 +68,7 @@ const EMPTY_FORM: Omit<Registration, "_id" | "createdAt"> = {
   whyJoin: "",
   portfolio: "",
   status: "Pending",
-};
-
-const STATUS_CONFIG = {
-  Pending: {
-    label: "Pending",
-    color: "text-amber-400",
-    bg: "amber",
-    dot: "amber",
-    icon: Clock,
-  },
-  Selected: {
-    label: "Selected",
-    color: "text-emerald-400",
-    bg: "emerald",
-    dot: "emerald",
-    icon: CheckCircle2,
-  },
-  Rejected: {
-    label: "Rejected",
-    color: "text-rose-400",
-    bg: "rose",
-    dot: "rose",
-    icon: XCircle,
-  },
+  qrToken: undefined,
 };
 
 /* ------------------------------------------------------------------ */
@@ -106,6 +90,22 @@ function initials(name: string) {
     .map((w) => w[0])
     .join("")
     .toUpperCase();
+}
+
+/** Normalise phone for WhatsApp — strip spaces/dashes, prepend 91 if no country code */
+function toWhatsAppNumber(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  if (digits.startsWith("91") && digits.length === 12) return digits;
+  if (digits.startsWith("0") && digits.length === 11) return "91" + digits.slice(1);
+  if (digits.length === 10) return "91" + digits;
+  return digits;
+}
+
+function buildVerifyUrl(token: string): string {
+  const base =
+    process.env.NEXT_PUBLIC_SITE_URL ||
+    (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
+  return `${base}/verify?token=${token}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -134,15 +134,7 @@ function StatusBadge({ status }: { status: Registration["status"] }) {
         color: c.text,
       }}
     >
-      <span
-        style={{
-          width: 6,
-          height: 6,
-          borderRadius: "50%",
-          background: c.dot,
-          flexShrink: 0,
-        }}
-      />
+      <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot, flexShrink: 0 }} />
       {status}
     </span>
   );
@@ -210,10 +202,12 @@ function Modal({
   title,
   onClose,
   children,
+  maxWidth,
 }: {
   title: string;
   onClose: () => void;
   children: React.ReactNode;
+  maxWidth?: number;
 }) {
   useEffect(() => {
     const fn = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
@@ -227,7 +221,7 @@ function Modal({
       style={{
         position: "fixed",
         inset: 0,
-        background: "rgba(0,0,0,0.7)",
+        background: "rgba(0,0,0,0.75)",
         backdropFilter: "blur(8px)",
         zIndex: 100,
         display: "flex",
@@ -243,7 +237,7 @@ function Modal({
           border: "1px solid rgba(99,130,255,0.18)",
           borderRadius: 20,
           width: "100%",
-          maxWidth: 680,
+          maxWidth: maxWidth ?? 680,
           maxHeight: "90vh",
           display: "flex",
           flexDirection: "column",
@@ -294,6 +288,173 @@ function Modal({
         <div style={{ padding: 24, overflowY: "auto", flex: 1 }}>{children}</div>
       </div>
     </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
+/* QR Modal                                                            */
+/* ------------------------------------------------------------------ */
+
+function QRModal({
+  reg,
+  onClose,
+  onGenerateToken,
+}: {
+  reg: Registration;
+  onClose: () => void;
+  onGenerateToken: () => Promise<void>;
+}) {
+  const [generating, setGenerating] = useState(false);
+  const [copied, setCopied] = useState(false);
+
+  const verifyUrl = reg.qrToken ? buildVerifyUrl(reg.qrToken) : null;
+
+  const waNumber = toWhatsAppNumber(reg.phone);
+  const waMessage = verifyUrl
+    ? encodeURIComponent(
+        `Hi ${reg.fullName}! 👋\n\nYou have been registered for the *Xavier TechByte Society Interview*.\n\nPlease show this QR code at the venue for check-in:\n${verifyUrl}\n\n— XTS Team`
+      )
+    : "";
+  const waLink = `https://wa.me/${waNumber}?text=${waMessage}`;
+
+  async function handleGenerate() {
+    setGenerating(true);
+    await onGenerateToken();
+    setGenerating(false);
+  }
+
+  async function handleDownload() {
+    if (!verifyUrl) return;
+    // Get the SVG element and convert to a data URL
+    const svgEl = document.getElementById("xts-qr-svg");
+    if (!svgEl) return;
+    const svgData = new XMLSerializer().serializeToString(svgEl);
+    const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
+    const url = URL.createObjectURL(svgBlob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `QR-${reg.fullName.replace(/\s+/g, "_")}.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }
+
+  async function handleCopy() {
+    if (!verifyUrl) return;
+    await navigator.clipboard.writeText(verifyUrl);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  }
+
+  return (
+    <Modal title="Participant QR Code" onClose={onClose} maxWidth={440}>
+      {/* Participant header */}
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+        <div style={{ width: 48, height: 48, borderRadius: 13, background: "linear-gradient(135deg,rgba(99,130,255,0.2),rgba(167,139,250,0.2))", border: "1px solid rgba(99,130,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: 800, color: "#a78bfa", flexShrink: 0 }}>
+          {initials(reg.fullName)}
+        </div>
+        <div style={{ flex: 1 }}>
+          <p style={{ margin: 0, fontWeight: 700, color: "white", fontSize: "0.95rem" }}>{reg.fullName}</p>
+          <p style={{ margin: "2px 0 6px", fontSize: "0.72rem", color: "#64748b" }}>{reg.course} · {reg.semester}</p>
+          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+            <StatusBadge status={reg.status} />
+            {reg.verified && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 999, fontSize: "0.68rem", fontWeight: 700, background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" }}>
+                <ShieldCheck size={10} /> Checked In
+              </span>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {!reg.qrToken ? (
+        /* No token yet — prompt to generate */
+        <div style={{ textAlign: "center", padding: "24px 0" }}>
+          <div style={{ width: 70, height: 70, borderRadius: 20, background: "rgba(99,130,255,0.08)", border: "1px solid rgba(99,130,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+            <QrCode size={30} color="#6382ff" />
+          </div>
+          <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginBottom: 20, lineHeight: 1.6 }}>
+            This participant does not have a QR token yet.<br />Click below to generate one.
+          </p>
+          <button
+            onClick={handleGenerate}
+            disabled={generating}
+            style={{ padding: "12px 28px", borderRadius: 12, background: "linear-gradient(135deg,#6382ff,#a78bfa)", color: "white", fontWeight: 700, fontSize: "0.9rem", border: "none", cursor: generating ? "not-allowed" : "pointer", opacity: generating ? 0.6 : 1, display: "inline-flex", alignItems: "center", gap: 8, fontFamily: "inherit", boxShadow: "0 4px 15px rgba(99,130,255,0.35)" }}
+          >
+            {generating ? <Loader2 size={14} color="white" style={{ animation: "xts-spin 1s linear infinite" }} /> : <QrCode size={14} />}
+            {generating ? "Generating…" : "Generate QR Code"}
+          </button>
+        </div>
+      ) : (
+        /* QR code display */
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+          {/* QR Card */}
+          <div style={{ background: "white", borderRadius: 20, padding: 20, boxShadow: "0 8px 40px rgba(0,0,0,0.6)", position: "relative" }}>
+            <QRCodeSVG
+              id="xts-qr-svg"
+              value={verifyUrl!}
+              size={220}
+              level="H"
+              includeMargin={false}
+              fgColor="#0f1623"
+              bgColor="white"
+            />
+            {/* Overlay logo */}
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#6382ff,#a78bfa)", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid white", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+              <Shield size={16} color="white" />
+            </div>
+          </div>
+
+          {/* Verify URL copy box */}
+          <div
+            style={{ width: "100%", padding: "10px 12px", background: "#141c2e", border: "1px solid rgba(99,130,255,0.15)", borderRadius: 10, display: "flex", alignItems: "center", gap: 8, cursor: "pointer" }}
+            onClick={handleCopy}
+            title="Click to copy"
+          >
+            <Link2 size={13} color="#6382ff" style={{ flexShrink: 0 }} />
+            <span style={{ fontSize: "0.72rem", color: "#64748b", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{verifyUrl}</span>
+            <span style={{ fontSize: "0.68rem", fontWeight: 700, color: copied ? "#34d399" : "#6382ff", flexShrink: 0, transition: "color 0.2s" }}>
+              {copied ? "Copied!" : "Copy"}
+            </span>
+          </div>
+
+          {/* Action buttons */}
+          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, width: "100%" }}>
+            {/* Download */}
+            <button
+              id={`download-qr-${reg._id}`}
+              onClick={handleDownload}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 16px", borderRadius: 12, background: "rgba(99,130,255,0.1)", border: "1px solid rgba(99,130,255,0.25)", color: "#6382ff", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(99,130,255,0.18)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(99,130,255,0.1)"; }}
+            >
+              <Download size={14} />
+              Download QR
+            </button>
+
+            {/* WhatsApp Share */}
+            <a
+              id={`whatsapp-share-${reg._id}`}
+              href={waLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 16px", borderRadius: 12, background: "rgba(37,211,102,0.12)", border: "1px solid rgba(37,211,102,0.3)", color: "#25d366", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", textDecoration: "none", transition: "all 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(37,211,102,0.2)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(37,211,102,0.12)"; }}
+            >
+              {/* WhatsApp icon */}
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="#25d366">
+                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+              </svg>
+              Share via WhatsApp
+            </a>
+          </div>
+
+          <p style={{ fontSize: "0.68rem", color: "#475569", textAlign: "center", lineHeight: 1.5 }}>
+            The QR code encodes a unique verification link.<br />Share it with the participant via WhatsApp.
+          </p>
+        </div>
+      )}
+    </Modal>
   );
 }
 
@@ -355,8 +516,8 @@ function RegForm({
   submitLabel,
   loading,
 }: {
-  initial: Omit<Registration, "_id" | "createdAt">;
-  onSubmit: (d: Omit<Registration, "_id" | "createdAt">) => Promise<void>;
+  initial: Omit<Registration, "_id" | "createdAt" | "verified">;
+  onSubmit: (d: Omit<Registration, "_id" | "createdAt" | "verified">) => Promise<void>;
   submitLabel: string;
   loading: boolean;
 }) {
@@ -440,7 +601,7 @@ function RegForm({
           transition: "opacity 0.15s",
         }}
       >
-        {loading ? <><Loader2 size={15} color="white" style={{ animation: "xts-spin 1s linear infinite" }} /> Processing…</> : <><Check size={15} /> {submitLabel}</>}
+        {loading ? <><Loader2 size={15} color="white" style={{ animation: "xts-spin 1s linear infinite" }} />Processing…</> : <><Check size={15} /> {submitLabel}</>}
       </button>
     </form>
   );
@@ -508,8 +669,8 @@ export default function AdminPortal() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [sendingMailId, setSendingMailId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
+  const [qrItem, setQrItem] = useState<Registration | null>(null);
 
   /* fetch */
   const fetchData = useCallback(async () => {
@@ -540,7 +701,7 @@ export default function AdminPortal() {
     setTimeout(() => setToastMsg(null), 3200);
   };
 
-  const handleAdd = async (data: Omit<Registration, "_id" | "createdAt">) => {
+  const handleAdd = async (data: Omit<Registration, "_id" | "createdAt" | "verified">) => {
     setSubmitting(true);
     try {
       const res = await fetch("/api/registration", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
@@ -556,7 +717,7 @@ export default function AdminPortal() {
     }
   };
 
-  const handleEdit = async (data: Omit<Registration, "_id" | "createdAt">) => {
+  const handleEdit = async (data: Omit<Registration, "_id" | "createdAt" | "verified">) => {
     if (!editItem) return;
     setSubmitting(true);
     try {
@@ -590,24 +751,6 @@ export default function AdminPortal() {
     }
   };
 
-  const handleSendMail = async (reg: Registration) => {
-    setSendingMailId(reg._id);
-    try {
-      const res = await fetch("/api/send-confirmation", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name: reg.fullName, email: reg.email }),
-      });
-      const json = await res.json();
-      if (!json.success) throw new Error(json.message || "Failed to send mail.");
-      toast(`✉️ Mail sent to ${reg.fullName}!`);
-    } catch (err: unknown) {
-      toast(err instanceof Error ? err.message : "Failed to send mail.");
-    } finally {
-      setSendingMailId(null);
-    }
-  };
-
   const handleStatusChange = async (id: string, status: Registration["status"]) => {
     try {
       await fetch(`/api/registration/${id}`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status }) });
@@ -615,6 +758,24 @@ export default function AdminPortal() {
       fetchData();
     } catch {
       toast("Failed to update status.");
+    }
+  };
+
+  /** Generate a qrToken for old records that don't have one */
+  const handleGenerateToken = async () => {
+    if (!qrItem) return;
+    try {
+      const res = await fetch(`/api/registration/${qrItem._id}`, { method: "PATCH" });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      // Update local state so modal shows QR immediately
+      setQrItem(json.data as Registration);
+      setRegistrations((prev) =>
+        prev.map((r) => (r._id === json.data._id ? json.data : r))
+      );
+      toast("QR token generated!");
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : "Failed to generate token.");
     }
   };
 
@@ -656,12 +817,23 @@ export default function AdminPortal() {
               <p style={{ margin: 0, fontSize: "0.7rem", color: "#64748b" }}>Xavier TechByte Society — Recruitment Manager</p>
             </div>
           </div>
-          <button
-            onClick={fetchData}
-            style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: "#0f1623", border: "1px solid rgba(99,130,255,0.15)", color: "#94a3b8", fontSize: "0.8rem", fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
-          >
-            <RefreshCw size={13} /> Refresh
-          </button>
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            {/* Verify page link */}
+            <a
+              href="/verify"
+              target="_blank"
+              rel="noopener noreferrer"
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: "rgba(99,130,255,0.08)", border: "1px solid rgba(99,130,255,0.2)", color: "#6382ff", fontSize: "0.8rem", fontWeight: 600, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s", textDecoration: "none" }}
+            >
+              <QrCode size={13} /> Open Scanner
+            </a>
+            <button
+              onClick={fetchData}
+              style={{ display: "flex", alignItems: "center", gap: 6, padding: "8px 14px", borderRadius: 8, background: "#0f1623", border: "1px solid rgba(99,130,255,0.15)", color: "#94a3b8", fontSize: "0.8rem", fontWeight: 500, cursor: "pointer", fontFamily: "inherit", transition: "all 0.15s" }}
+            >
+              <RefreshCw size={13} /> Refresh
+            </button>
+          </div>
         </header>
 
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 20px" }}>
@@ -727,7 +899,7 @@ export default function AdminPortal() {
           {/* TABLE */}
           <div style={{ background: "#0f1623", border: "1px solid rgba(99,130,255,0.12)", borderRadius: 16, overflow: "hidden" }}>
             <div style={{ overflowX: "auto" }}>
-              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 860 }}>
+              <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                 <thead>
                   <tr style={{ background: "#141c2e", borderBottom: "1px solid rgba(99,130,255,0.12)" }}>
                     {["Applicant", "Phone", "Course", "Semester", "Interest / Skills", "Status", "Applied", "Actions"].map((h) => (
@@ -768,18 +940,25 @@ export default function AdminPortal() {
                       </td>
                       {/* Status */}
                       <td style={{ padding: "13px 16px", verticalAlign: "middle" }}>
-                        <div style={{ position: "relative", display: "inline-block" }}>
-                          <StatusBadge status={reg.status} />
-                          <select
-                            aria-label="Change status"
-                            value={reg.status}
-                            onChange={(e) => handleStatusChange(reg._id, e.target.value as Registration["status"])}
-                            style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", cursor: "pointer" }}
-                          >
-                            <option value="Pending">Pending</option>
-                            <option value="Selected">Selected</option>
-                            <option value="Rejected">Rejected</option>
-                          </select>
+                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
+                          <div style={{ position: "relative", display: "inline-block" }}>
+                            <StatusBadge status={reg.status} />
+                            <select
+                              aria-label="Change status"
+                              value={reg.status}
+                              onChange={(e) => handleStatusChange(reg._id, e.target.value as Registration["status"])}
+                              style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", cursor: "pointer" }}
+                            >
+                              <option value="Pending">Pending</option>
+                              <option value="Selected">Selected</option>
+                              <option value="Rejected">Rejected</option>
+                            </select>
+                          </div>
+                          {reg.verified && (
+                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.62rem", color: "#34d399", fontWeight: 600 }}>
+                              <ShieldCheck size={10} /> Verified
+                            </span>
+                          )}
                         </div>
                       </td>
                       {/* Date */}
@@ -790,6 +969,7 @@ export default function AdminPortal() {
                           {[
                             { id: `view-${reg._id}`, icon: Eye, color: "#6382ff", bg: "rgba(99,130,255,0.1)", fn: () => setViewItem(reg), title: "View" },
                             { id: `edit-${reg._id}`, icon: Pencil, color: "#a78bfa", bg: "rgba(167,139,250,0.1)", fn: () => setEditItem(reg), title: "Edit" },
+                            { id: `qr-${reg._id}`, icon: QrCode, color: "#25d366", bg: "rgba(37,211,102,0.1)", fn: () => setQrItem(reg), title: "QR / WhatsApp" },
                             { id: `delete-${reg._id}`, icon: Trash2, color: "#fb7185", bg: "rgba(251,113,133,0.1)", fn: () => setDeleteId(reg._id), title: "Delete" },
                           ].map(({ id, icon: Ic, color, bg, fn, title }) => (
                             <button
@@ -803,31 +983,6 @@ export default function AdminPortal() {
                               <Ic size={13} color={color} />
                             </button>
                           ))}
-                          {/* Send Mail button */}
-                          <button
-                            id={`send-mail-${reg._id}`}
-                            title="Send Confirmation Mail"
-                            disabled={sendingMailId === reg._id}
-                            onClick={() => handleSendMail(reg)}
-                            className="xts-action"
-                            style={{
-                              width: 32,
-                              height: 32,
-                              borderRadius: 8,
-                              background: sendingMailId === reg._id ? "rgba(52,211,153,0.05)" : "rgba(52,211,153,0.1)",
-                              border: "1px solid rgba(52,211,153,0.3)",
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
-                              cursor: sendingMailId === reg._id ? "not-allowed" : "pointer",
-                              transition: "opacity 0.15s",
-                              opacity: sendingMailId === reg._id ? 0.5 : 1,
-                            }}
-                          >
-                            {sendingMailId === reg._id
-                              ? <Loader2 size={13} color="#34d399" style={{ animation: "xts-spin 1s linear infinite" }} />
-                              : <Mail size={13} color="#34d399" />}
-                          </button>
                         </div>
                       </td>
                     </tr>
@@ -874,7 +1029,14 @@ export default function AdminPortal() {
             <div>
               <p style={{ margin: 0, fontWeight: 700, color: "white", fontSize: "1rem" }}>{viewItem.fullName}</p>
               <p style={{ margin: "2px 0 6px", fontSize: "0.75rem", color: "#64748b" }}>Applied {formatDate(viewItem.createdAt)}</p>
-              <StatusBadge status={viewItem.status} />
+              <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
+                <StatusBadge status={viewItem.status} />
+                {viewItem.verified && (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 999, fontSize: "0.68rem", fontWeight: 700, background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" }}>
+                    <ShieldCheck size={10} /> Interview Verified
+                  </span>
+                )}
+              </div>
             </div>
           </div>
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
@@ -903,11 +1065,26 @@ export default function AdminPortal() {
             <button onClick={() => { setViewItem(null); setEditItem(viewItem); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px", background: "linear-gradient(135deg,#6382ff,#a78bfa)", color: "white", fontWeight: 700, fontSize: "0.875rem", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}>
               <Pencil size={14} /> Edit Record
             </button>
+            <button
+              onClick={() => { setViewItem(null); setQrItem(viewItem); }}
+              style={{ display: "flex", alignItems: "center", gap: 8, padding: "11px 18px", background: "rgba(37,211,102,0.1)", border: "1px solid rgba(37,211,102,0.3)", color: "#25d366", fontWeight: 700, fontSize: "0.875rem", borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}
+            >
+              <Share2 size={14} /> QR / Share
+            </button>
             <button onClick={() => setViewItem(null)} style={{ padding: "11px 20px", borderRadius: 10, background: "#141c2e", border: "1px solid rgba(99,130,255,0.15)", color: "#94a3b8", fontWeight: 600, fontSize: "0.875rem", cursor: "pointer", fontFamily: "inherit" }}>
               Close
             </button>
           </div>
         </Modal>
+      )}
+
+      {/* ── QR MODAL ── */}
+      {qrItem && (
+        <QRModal
+          reg={qrItem}
+          onClose={() => setQrItem(null)}
+          onGenerateToken={handleGenerateToken}
+        />
       )}
 
       {/* ── ADD MODAL ── */}
@@ -921,7 +1098,7 @@ export default function AdminPortal() {
       {editItem && (
         <Modal title="Edit Registration" onClose={() => setEditItem(null)}>
           <RegForm
-            initial={{ fullName: editItem.fullName, email: editItem.email, phone: editItem.phone, course: editItem.course, semester: editItem.semester, interest: editItem.interest, skills: editItem.skills, whyJoin: editItem.whyJoin ?? "", portfolio: editItem.portfolio ?? "", status: editItem.status }}
+            initial={{ fullName: editItem.fullName, email: editItem.email, phone: editItem.phone, course: editItem.course, semester: editItem.semester, interest: editItem.interest, skills: editItem.skills, whyJoin: editItem.whyJoin ?? "", portfolio: editItem.portfolio ?? "", status: editItem.status, qrToken: editItem.qrToken }}
             onSubmit={handleEdit}
             submitLabel="Save Changes"
             loading={submitting}
