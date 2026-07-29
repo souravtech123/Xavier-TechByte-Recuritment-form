@@ -52,12 +52,13 @@ interface Registration {
   status: "Pending" | "Selected" | "Rejected";
   qrToken?: string;
   verified: boolean;
+  interviewDone: boolean;
   createdAt: string;
 }
 
 type StatusFilter = "All" | "Pending" | "Selected" | "Rejected";
 
-const EMPTY_FORM: Omit<Registration, "_id" | "createdAt" | "verified"> = {
+const EMPTY_FORM: Omit<Registration, "_id" | "createdAt" | "verified" | "interviewDone"> = {
   fullName: "",
   email: "",
   phone: "",
@@ -137,60 +138,6 @@ function StatusBadge({ status }: { status: Registration["status"] }) {
       <span style={{ width: 6, height: 6, borderRadius: "50%", background: c.dot, flexShrink: 0 }} />
       {status}
     </span>
-  );
-}
-
-/* ------------------------------------------------------------------ */
-/* Stat Card                                                            */
-/* ------------------------------------------------------------------ */
-
-function StatCard({
-  label,
-  value,
-  icon: Icon,
-  iconColor,
-  iconBg,
-}: {
-  label: string;
-  value: number;
-  icon: React.ComponentType<{ size?: number; color?: string }>;
-  iconColor: string;
-  iconBg: string;
-}) {
-  return (
-    <div
-      style={{
-        background: "#0f1623",
-        border: "1px solid rgba(99,130,255,0.12)",
-        borderRadius: 16,
-        padding: "18px 20px",
-        display: "flex",
-        alignItems: "center",
-        gap: 16,
-        transition: "border-color 0.2s, box-shadow 0.2s",
-      }}
-    >
-      <div
-        style={{
-          width: 46,
-          height: 46,
-          borderRadius: 12,
-          background: iconBg,
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          flexShrink: 0,
-        }}
-      >
-        <Icon size={20} color={iconColor} />
-      </div>
-      <div>
-        <p style={{ fontSize: "1.75rem", fontWeight: 800, color: "white", margin: 0, lineHeight: 1 }}>
-          {value}
-        </p>
-        <p style={{ fontSize: "0.75rem", color: "#64748b", margin: "4px 0 0" }}>{label}</p>
-      </div>
-    </div>
   );
 }
 
@@ -306,13 +253,15 @@ function QRModal({
 }) {
   const [generating, setGenerating] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [sharing, setSharing] = useState(false);
+  const [sharePhone, setSharePhone] = useState(reg.phone);
 
   const verifyUrl = reg.qrToken ? buildVerifyUrl(reg.qrToken) : null;
 
-  const waNumber = toWhatsAppNumber(reg.phone);
+  const waNumber = toWhatsAppNumber(sharePhone);
   const waMessage = verifyUrl
     ? encodeURIComponent(
-        `Hi ${reg.fullName}! 👋\n\nYou have been registered for the *Xavier TechByte Society Interview*.\n\nPlease show this QR code at the venue for check-in:\n${verifyUrl}\n\n— XTS Team`
+        `🌟 *Xavier TechByte Society Recruitment '26* 🌟\n\nHello *${reg.fullName}*,\n\nYour registration is confirmed! Below is your unique entry key for the interview stage.\n\n📅 *Status*: Ready for Interview\n🔑 *Your Entry QR Code Link*:\n${verifyUrl}\n\n*Instructions*:\n1. Open the link above to view your ticket and QR code.\n2. Show the QR code to the venue checker on arrival.\n\nSee you there! All the best! 🚀`
       )
     : "";
   const waLink = `https://wa.me/${waNumber}?text=${waMessage}`;
@@ -323,11 +272,10 @@ function QRModal({
     setGenerating(false);
   }
 
-  async function handleDownload() {
-    if (!verifyUrl) return;
-    // Get the SVG element and convert to a data URL
+  async function handleDownload(): Promise<string | null> {
+    if (!verifyUrl) return null;
     const svgEl = document.getElementById("xts-qr-svg");
-    if (!svgEl) return;
+    if (!svgEl) return null;
     const svgData = new XMLSerializer().serializeToString(svgEl);
     const svgBlob = new Blob([svgData], { type: "image/svg+xml;charset=utf-8" });
     const url = URL.createObjectURL(svgBlob);
@@ -336,6 +284,74 @@ function QRModal({
     a.download = `QR-${reg.fullName.replace(/\s+/g, "_")}.svg`;
     a.click();
     URL.revokeObjectURL(url);
+    return url;
+  }
+
+  async function handleShareImage() {
+    if (!verifyUrl) return;
+    setSharing(true);
+
+    try {
+      const svgEl = document.getElementById("xts-qr-svg");
+      if (!svgEl) {
+        setSharing(false);
+        return;
+      }
+
+      // Convert SVG to canvas
+      const svgString = new XMLSerializer().serializeToString(svgEl);
+      const svgBlob = new Blob([svgString], { type: "image/svg+xml;charset=utf-8" });
+      const URL = window.URL || window.webkitURL || window;
+      const blobURL = URL.createObjectURL(svgBlob);
+
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement("canvas");
+        canvas.width = 300;
+        canvas.height = 300;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.fillStyle = "white";
+          ctx.fillRect(0, 0, 300, 300);
+          ctx.drawImage(img, 10, 10, 280, 280);
+
+          canvas.toBlob(async (blob) => {
+            if (!blob) {
+              setSharing(false);
+              return;
+            }
+            const file = new File([blob], `QR_${reg.fullName.replace(/\s+/g, "_")}.png`, { type: "image/png" });
+
+            // Check if Web Share API works with files (e.g., mobile)
+            if (navigator.canShare && navigator.canShare({ files: [file] })) {
+              try {
+                await navigator.share({
+                  files: [file],
+                  title: `${reg.fullName} QR Code`,
+                  text: `🌟 *Xavier TechByte Society Recruitment '26* 🌟\n\nHello *${reg.fullName}*,\n\nYour registration is confirmed! Below is your entry link:\n${verifyUrl}`,
+                });
+              } catch (shareErr) {
+                console.error("Web Share failed, falling back to URL chat link:", shareErr);
+                window.open(waLink, "_blank");
+              }
+            } else {
+              // Desktop fallback: Download image and open WhatsApp chat deep-link
+              handleDownload();
+              alert("Direct QR Image sharing is only supported on mobile devices. The QR Code image has been downloaded. Redirecting to WhatsApp Web...");
+              window.open(waLink, "_blank");
+            }
+            setSharing(false);
+          }, "image/png");
+        } else {
+          setSharing(false);
+        }
+      };
+      img.src = blobURL;
+    } catch (err) {
+      console.error("Sharing failed:", err);
+      window.open(waLink, "_blank");
+      setSharing(false);
+    }
   }
 
   async function handleCopy() {
@@ -348,20 +364,24 @@ function QRModal({
   return (
     <Modal title="Participant QR Code" onClose={onClose} maxWidth={440}>
       {/* Participant header */}
-      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 24 }}>
+      <div style={{ display: "flex", alignItems: "center", gap: 12, marginBottom: 20 }}>
         <div style={{ width: 48, height: 48, borderRadius: 13, background: "linear-gradient(135deg,rgba(99,130,255,0.2),rgba(167,139,250,0.2))", border: "1px solid rgba(99,130,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", fontSize: "0.9rem", fontWeight: 800, color: "#a78bfa", flexShrink: 0 }}>
           {initials(reg.fullName)}
         </div>
         <div style={{ flex: 1 }}>
           <p style={{ margin: 0, fontWeight: 700, color: "white", fontSize: "0.95rem" }}>{reg.fullName}</p>
           <p style={{ margin: "2px 0 6px", fontSize: "0.72rem", color: "#64748b" }}>{reg.course} · {reg.semester}</p>
-          <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <div style={{ display: "flex", alignItems: "center", gap: 6, flexWrap: "wrap" }}>
             <StatusBadge status={reg.status} />
-            {reg.verified && (
+            {reg.interviewDone ? (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 999, fontSize: "0.68rem", fontWeight: 700, background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}>
+                <CheckCircle2 size={10} /> Interview Completed
+              </span>
+            ) : reg.verified ? (
               <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 999, fontSize: "0.68rem", fontWeight: 700, background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" }}>
                 <ShieldCheck size={10} /> Checked In
               </span>
-            )}
+            ) : null}
           </div>
         </div>
       </div>
@@ -386,21 +406,46 @@ function QRModal({
         </div>
       ) : (
         /* QR code display */
-        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 20 }}>
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 16 }}>
+          
+          {/* Custom WhatsApp Number Input */}
+          <div style={{ width: "100%", display: "flex", flexDirection: "column", gap: 6 }}>
+            <label style={{ fontSize: "0.68rem", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em" }}>
+              Target WhatsApp Share Number
+            </label>
+            <input
+              type="text"
+              value={sharePhone}
+              onChange={(e) => setSharePhone(e.target.value)}
+              placeholder="e.g. +91 9876543210"
+              style={{
+                width: "100%",
+                padding: "8px 12px",
+                background: "#141c2e",
+                border: "1px solid rgba(99,130,255,0.15)",
+                borderRadius: 10,
+                color: "#e2e8f0",
+                fontSize: "0.875rem",
+                outline: "none",
+                fontFamily: "inherit",
+              }}
+            />
+          </div>
+
           {/* QR Card */}
-          <div style={{ background: "white", borderRadius: 20, padding: 20, boxShadow: "0 8px 40px rgba(0,0,0,0.6)", position: "relative" }}>
+          <div style={{ background: "white", borderRadius: 20, padding: 18, boxShadow: "0 8px 40px rgba(0,0,0,0.6)", position: "relative" }}>
             <QRCodeSVG
               id="xts-qr-svg"
               value={verifyUrl!}
-              size={220}
+              size={200}
               level="H"
               includeMargin={false}
               fgColor="#0f1623"
               bgColor="white"
             />
             {/* Overlay logo */}
-            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#6382ff,#a78bfa)", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid white", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
-              <Shield size={16} color="white" />
+            <div style={{ position: "absolute", top: "50%", left: "50%", transform: "translate(-50%,-50%)", width: 34, height: 34, borderRadius: 10, background: "linear-gradient(135deg,#6382ff,#a78bfa)", display: "flex", alignItems: "center", justifyContent: "center", border: "3px solid white", boxShadow: "0 2px 8px rgba(0,0,0,0.2)" }}>
+              <Shield size={15} color="white" />
             </div>
           </div>
 
@@ -431,26 +476,28 @@ function QRModal({
               Download QR
             </button>
 
-            {/* WhatsApp Share */}
-            <a
+            {/* WhatsApp Direct Share */}
+            <button
               id={`whatsapp-share-${reg._id}`}
-              href={waLink}
-              target="_blank"
-              rel="noopener noreferrer"
-              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 16px", borderRadius: 12, background: "rgba(37,211,102,0.12)", border: "1px solid rgba(37,211,102,0.3)", color: "#25d366", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", textDecoration: "none", transition: "all 0.15s" }}
-              onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(37,211,102,0.2)"; }}
-              onMouseLeave={e => { (e.currentTarget as HTMLAnchorElement).style.background = "rgba(37,211,102,0.12)"; }}
+              onClick={handleShareImage}
+              disabled={sharing}
+              style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 7, padding: "11px 16px", borderRadius: 12, background: "rgba(37,211,102,0.12)", border: "1px solid rgba(37,211,102,0.3)", color: "#25d366", fontWeight: 700, fontSize: "0.82rem", cursor: "pointer", transition: "all 0.15s" }}
+              onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(37,211,102,0.2)"; }}
+              onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(37,211,102,0.12)"; }}
             >
-              {/* WhatsApp icon */}
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="#25d366">
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
-              </svg>
-              Share via WhatsApp
-            </a>
+              {sharing ? (
+                <Loader2 size={14} color="#25d366" style={{ animation: "xts-spin 1s linear infinite" }} />
+              ) : (
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="#25d366">
+                  <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/>
+                </svg>
+              )}
+              Share QR Image
+            </button>
           </div>
 
           <p style={{ fontSize: "0.68rem", color: "#475569", textAlign: "center", lineHeight: 1.5 }}>
-            The QR code encodes a unique verification link.<br />Share it with the participant via WhatsApp.
+            Direct image sharing works natively on mobile device browsers.<br />Input any number above to send to a different recipient.
           </p>
         </div>
       )}
@@ -516,8 +563,8 @@ function RegForm({
   submitLabel,
   loading,
 }: {
-  initial: Omit<Registration, "_id" | "createdAt" | "verified">;
-  onSubmit: (d: Omit<Registration, "_id" | "createdAt" | "verified">) => Promise<void>;
+  initial: Omit<Registration, "_id" | "createdAt" | "verified" | "interviewDone">;
+  onSubmit: (d: Omit<Registration, "_id" | "createdAt" | "verified" | "interviewDone">) => Promise<void>;
   submitLabel: string;
   loading: boolean;
 }) {
@@ -701,7 +748,7 @@ export default function AdminPortal() {
     setTimeout(() => setToastMsg(null), 3200);
   };
 
-  const handleAdd = async (data: Omit<Registration, "_id" | "createdAt" | "verified">) => {
+  const handleAdd = async (data: Omit<Registration, "_id" | "createdAt" | "verified" | "interviewDone">) => {
     setSubmitting(true);
     try {
       const res = await fetch("/api/registration", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(data) });
@@ -717,7 +764,7 @@ export default function AdminPortal() {
     }
   };
 
-  const handleEdit = async (data: Omit<Registration, "_id" | "createdAt" | "verified">) => {
+  const handleEdit = async (data: Omit<Registration, "_id" | "createdAt" | "verified" | "interviewDone">) => {
     if (!editItem) return;
     setSubmitting(true);
     try {
@@ -761,6 +808,33 @@ export default function AdminPortal() {
     }
   };
 
+  /** Handles Manual Override of Check-in and Interview statuses */
+  const handleInterviewStatusChange = async (id: string, value: string) => {
+    let verified = false;
+    let interviewDone = false;
+
+    if (value === "CheckedIn") {
+      verified = true;
+    } else if (value === "Done") {
+      verified = true;
+      interviewDone = true;
+    }
+
+    try {
+      const res = await fetch(`/api/registration/${id}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ verified, interviewDone }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message);
+      toast("Interview Status Updated!");
+      fetchData();
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : "Failed to update status.");
+    }
+  };
+
   /** Generate a qrToken for old records that don't have one */
   const handleGenerateToken = async () => {
     if (!qrItem) return;
@@ -781,6 +855,8 @@ export default function AdminPortal() {
 
   const stats = {
     total: registrations.length,
+    verified: registrations.filter((r) => r.verified).length,
+    interviewDone: registrations.filter((r) => r.interviewDone).length,
     pending: registrations.filter((r) => r.status === "Pending").length,
     selected: registrations.filter((r) => r.status === "Selected").length,
     rejected: registrations.filter((r) => r.status === "Rejected").length,
@@ -838,12 +914,82 @@ export default function AdminPortal() {
 
         <main style={{ maxWidth: 1400, margin: "0 auto", padding: "28px 20px" }}>
 
-          {/* STATS */}
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(200px,1fr))", gap: 14, marginBottom: 28 }}>
-            <StatCard label="Total Applicants" value={stats.total} icon={Users} iconColor="#6382ff" iconBg="rgba(99,130,255,0.12)" />
-            <StatCard label="Pending Review" value={stats.pending} icon={Clock} iconColor="#fbbf24" iconBg="rgba(251,191,36,0.12)" />
-            <StatCard label="Selected" value={stats.selected} icon={CheckCircle2} iconColor="#34d399" iconBg="rgba(52,211,153,0.12)" />
-            <StatCard label="Rejected" value={stats.rejected} icon={XCircle} iconColor="#fb7185" iconBg="rgba(251,113,133,0.12)" />
+          {/* ANALYTICS BOARD */}
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(320px, 1fr))", gap: 20, marginBottom: 28 }}>
+            
+            {/* Card 1: Check-in & Interview Funnel */}
+            <div style={{ background: "linear-gradient(135deg, #0f1623, #151e30)", border: "1px solid rgba(99,130,255,0.15)", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 4px 30px rgba(0,0,0,0.3)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "white", display: "flex", alignItems: "center", gap: 8 }}>
+                  <QrCode size={18} color="#6382ff" /> Interview Flow Funnel
+                </h3>
+                <span style={{ fontSize: "0.72rem", background: "rgba(99,130,255,0.15)", color: "#6382ff", padding: "3px 10px", borderRadius: 999, fontWeight: 700 }}>Venue Stats</span>
+              </div>
+              
+              <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
+                {/* Total Registered */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#94a3b8", marginBottom: 4 }}>
+                    <span>Total Registered Candidates</span>
+                    <span style={{ fontWeight: 700, color: "white" }}>{stats.total}</span>
+                  </div>
+                  <div style={{ width: "100%", height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ width: "100%", height: "100%", background: "linear-gradient(90deg, #6382ff, #a78bfa)", borderRadius: 3 }} />
+                  </div>
+                </div>
+
+                {/* Checked In */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#94a3b8", marginBottom: 4 }}>
+                    <span>Venue Check-In (Verified)</span>
+                    <span style={{ fontWeight: 700, color: "#34d399" }}>{stats.verified} <span style={{ fontSize: "0.7rem", color: "#475569" }}>({stats.total ? Math.round((stats.verified / stats.total) * 100) : 0}%)</span></span>
+                  </div>
+                  <div style={{ width: "100%", height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ width: `${stats.total ? (stats.verified / stats.total) * 100 : 0}%`, height: "100%", background: "#34d399", borderRadius: 3, transition: "width 0.5s ease" }} />
+                  </div>
+                </div>
+
+                {/* Interviews Done */}
+                <div>
+                  <div style={{ display: "flex", justifyContent: "space-between", fontSize: "0.8rem", color: "#94a3b8", marginBottom: 4 }}>
+                    <span>Interviews Completed (Done)</span>
+                    <span style={{ fontWeight: 700, color: "#a78bfa" }}>{stats.interviewDone} <span style={{ fontSize: "0.7rem", color: "#475569" }}>({stats.verified ? Math.round((stats.interviewDone / stats.verified) * 100) : 0}% of checked-in)</span></span>
+                  </div>
+                  <div style={{ width: "100%", height: 6, background: "rgba(255,255,255,0.05)", borderRadius: 3, overflow: "hidden" }}>
+                    <div style={{ width: `${stats.verified ? (stats.interviewDone / stats.verified) * 100 : 0}%`, height: "100%", background: "#a78bfa", borderRadius: 3, transition: "width 0.5s ease" }} />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Card 2: Candidate Status Board */}
+            <div style={{ background: "linear-gradient(135deg, #0f1623, #151e30)", border: "1px solid rgba(99,130,255,0.15)", borderRadius: 20, padding: 24, display: "flex", flexDirection: "column", gap: 16, boxShadow: "0 4px 30px rgba(0,0,0,0.3)" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                <h3 style={{ margin: 0, fontSize: "0.95rem", fontWeight: 800, color: "white", display: "flex", alignItems: "center", gap: 8 }}>
+                  <ShieldCheck size={18} color="#a78bfa" /> Decision Analytics Board
+                </h3>
+                <span style={{ fontSize: "0.72rem", background: "rgba(167,139,250,0.15)", color: "#a78bfa", padding: "3px 10px", borderRadius: 999, fontWeight: 700 }}>Results</span>
+              </div>
+
+              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 10, flex: 1 }}>
+                {/* Selected */}
+                <div style={{ background: "rgba(52,211,153,0.05)", border: "1px solid rgba(52,211,153,0.15)", borderRadius: 14, padding: "14px 10px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  <p style={{ margin: 0, fontSize: "1.6rem", fontWeight: 800, color: "#34d399" }}>{stats.selected}</p>
+                  <p style={{ margin: "4px 0 0", fontSize: "0.68rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Selected</p>
+                </div>
+                {/* Pending */}
+                <div style={{ background: "rgba(251,191,36,0.05)", border: "1px solid rgba(251,191,36,0.15)", borderRadius: 14, padding: "14px 10px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  <p style={{ margin: 0, fontSize: "1.6rem", fontWeight: 800, color: "#fbbf24" }}>{stats.pending}</p>
+                  <p style={{ margin: "4px 0 0", fontSize: "0.68rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Pending</p>
+                </div>
+                {/* Rejected */}
+                <div style={{ background: "rgba(251,113,133,0.05)", border: "1px solid rgba(251,113,133,0.15)", borderRadius: 14, padding: "14px 10px", textAlign: "center", display: "flex", flexDirection: "column", justifyContent: "center" }}>
+                  <p style={{ margin: 0, fontSize: "1.6rem", fontWeight: 800, color: "#fb7185" }}>{stats.rejected}</p>
+                  <p style={{ margin: "4px 0 0", fontSize: "0.68rem", color: "#64748b", fontWeight: 600, textTransform: "uppercase" }}>Rejected</p>
+                </div>
+              </div>
+            </div>
+            
           </div>
 
           {/* TOOLBAR */}
@@ -902,7 +1048,7 @@ export default function AdminPortal() {
               <table style={{ width: "100%", borderCollapse: "collapse", minWidth: 900 }}>
                 <thead>
                   <tr style={{ background: "#141c2e", borderBottom: "1px solid rgba(99,130,255,0.12)" }}>
-                    {["Applicant", "Phone", "Course", "Semester", "Interest / Skills", "Status", "Applied", "Actions"].map((h) => (
+                    {["Applicant", "Phone", "Course", "Semester", "Interest / Skills", "Selection Status", "Manual Verify / Status", "Applied", "Actions"].map((h) => (
                       <th key={h} style={{ padding: "13px 16px", textAlign: "left", fontSize: "0.68rem", fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.06em", color: "#64748b", whiteSpace: "nowrap" }}>{h}</th>
                     ))}
                   </tr>
@@ -938,27 +1084,47 @@ export default function AdminPortal() {
                           {reg.interest}
                         </span>
                       </td>
-                      {/* Status */}
+                      {/* Selection Status */}
                       <td style={{ padding: "13px 16px", verticalAlign: "middle" }}>
-                        <div style={{ display: "flex", flexDirection: "column", gap: 4 }}>
-                          <div style={{ position: "relative", display: "inline-block" }}>
-                            <StatusBadge status={reg.status} />
-                            <select
-                              aria-label="Change status"
-                              value={reg.status}
-                              onChange={(e) => handleStatusChange(reg._id, e.target.value as Registration["status"])}
-                              style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", cursor: "pointer" }}
-                            >
-                              <option value="Pending">Pending</option>
-                              <option value="Selected">Selected</option>
-                              <option value="Rejected">Rejected</option>
-                            </select>
-                          </div>
-                          {reg.verified && (
-                            <span style={{ display: "inline-flex", alignItems: "center", gap: 4, fontSize: "0.62rem", color: "#34d399", fontWeight: 600 }}>
-                              <ShieldCheck size={10} /> Verified
-                            </span>
-                          )}
+                        <div style={{ position: "relative", display: "inline-block" }}>
+                          <StatusBadge status={reg.status} />
+                          <select
+                            aria-label="Change status"
+                            value={reg.status}
+                            onChange={(e) => handleStatusChange(reg._id, e.target.value as Registration["status"])}
+                            style={{ position: "absolute", inset: 0, opacity: 0, width: "100%", cursor: "pointer" }}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Selected">Selected</option>
+                            <option value="Rejected">Rejected</option>
+                          </select>
+                        </div>
+                      </td>
+                      {/* Manual Verify/Status Dropdown */}
+                      <td style={{ padding: "13px 16px", verticalAlign: "middle" }}>
+                        <div style={{ position: "relative" }}>
+                          <select
+                            value={reg.interviewDone ? "Done" : reg.verified ? "CheckedIn" : "Absent"}
+                            onChange={(e) => handleInterviewStatusChange(reg._id, e.target.value)}
+                            style={{
+                              padding: "6px 24px 6px 10px",
+                              background: reg.interviewDone ? "rgba(167,139,250,0.1)" : reg.verified ? "rgba(52,211,153,0.1)" : "rgba(255,255,255,0.03)",
+                              border: `1px solid ${reg.interviewDone ? "rgba(167,139,250,0.3)" : reg.verified ? "rgba(52,211,153,0.3)" : "rgba(255,255,255,0.1)"}`,
+                              borderRadius: 8,
+                              color: reg.interviewDone ? "#a78bfa" : reg.verified ? "#34d399" : "#64748b",
+                              fontSize: "0.75rem",
+                              fontWeight: 700,
+                              outline: "none",
+                              cursor: "pointer",
+                              appearance: "none",
+                              fontFamily: "inherit",
+                            }}
+                          >
+                            <option value="Absent" style={{ background: "#0f1623", color: "#64748b" }}>Absent</option>
+                            <option value="CheckedIn" style={{ background: "#0f1623", color: "#34d399" }}>Checked In</option>
+                            <option value="Done" style={{ background: "#0f1623", color: "#a78bfa" }}>Interview Done</option>
+                          </select>
+                          <ChevronDown size={11} color={reg.interviewDone ? "#a78bfa" : reg.verified ? "#34d399" : "#64748b"} style={{ position: "absolute", right: 8, top: "50%", transform: "translateY(-50%)", pointerEvents: "none" }} />
                         </div>
                       </td>
                       {/* Date */}
@@ -969,6 +1135,32 @@ export default function AdminPortal() {
                           {[
                             { id: `view-${reg._id}`, icon: Eye, color: "#6382ff", bg: "rgba(99,130,255,0.1)", fn: () => setViewItem(reg), title: "View" },
                             { id: `edit-${reg._id}`, icon: Pencil, color: "#a78bfa", bg: "rgba(167,139,250,0.1)", fn: () => setEditItem(reg), title: "Edit" },
+                            { id: `mail-${reg._id}`, icon: Share2, color: "#38bdf8", bg: "rgba(56,189,248,0.1)", fn: async () => {
+                              let token = reg.qrToken;
+                              if (!token) {
+                                try {
+                                  const res = await fetch(`/api/registration/${reg._id}`, { method: "PATCH" });
+                                  const json = await res.json();
+                                  if (!json.success) throw new Error(json.message);
+                                  token = json.data.qrToken;
+                                  setRegistrations((prev) =>
+                                    prev.map((r) => (r._id === json.data._id ? json.data : r))
+                                  );
+                                  toast("Ticket generated!");
+                                } catch (err: any) {
+                                  toast(err.message || "Failed to generate token.");
+                                  return;
+                                }
+                              }
+                              
+                              const base = window.location.origin;
+                              const verifyUrl = `${base}/verify?token=${token}`;
+                              const waNumber = toWhatsAppNumber(reg.phone);
+                              const waMessage = encodeURIComponent(
+                                `🌟 *Xavier TechByte Society Recruitment '26* 🌟\n\nHello *${reg.fullName}*,\n\nYour registration is confirmed! Below is your unique entry key for the interview stage.\n\n📅 *Status*: Ready for Interview\n🔑 *Your Entry QR Code Link*:\n${verifyUrl}\n\n*Instructions*:\n1. Open the link above to view your ticket and QR code.\n2. Show the QR code to the venue checker on arrival.\n\nSee you there! All the best! 🚀`
+                              );
+                              window.open(`https://wa.me/${waNumber}?text=${waMessage}`, "_blank");
+                            }, title: "Send Ticket via WhatsApp" },
                             { id: `qr-${reg._id}`, icon: QrCode, color: "#25d366", bg: "rgba(37,211,102,0.1)", fn: () => setQrItem(reg), title: "QR / WhatsApp" },
                             { id: `delete-${reg._id}`, icon: Trash2, color: "#fb7185", bg: "rgba(251,113,133,0.1)", fn: () => setDeleteId(reg._id), title: "Delete" },
                           ].map(({ id, icon: Ic, color, bg, fn, title }) => (
@@ -1031,11 +1223,15 @@ export default function AdminPortal() {
               <p style={{ margin: "2px 0 6px", fontSize: "0.75rem", color: "#64748b" }}>Applied {formatDate(viewItem.createdAt)}</p>
               <div style={{ display: "flex", gap: 6, flexWrap: "wrap" }}>
                 <StatusBadge status={viewItem.status} />
-                {viewItem.verified && (
-                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 999, fontSize: "0.68rem", fontWeight: 700, background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" }}>
-                    <ShieldCheck size={10} /> Interview Verified
+                {viewItem.interviewDone ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 999, fontSize: "0.68rem", fontWeight: 700, background: "rgba(167,139,250,0.1)", border: "1px solid rgba(167,139,250,0.3)", color: "#a78bfa" }}>
+                    <CheckCircle2 size={10} /> Interview Completed
                   </span>
-                )}
+                ) : viewItem.verified ? (
+                  <span style={{ display: "inline-flex", alignItems: "center", gap: 4, padding: "3px 8px", borderRadius: 999, fontSize: "0.68rem", fontWeight: 700, background: "rgba(52,211,153,0.1)", border: "1px solid rgba(52,211,153,0.3)", color: "#34d399" }}>
+                    <ShieldCheck size={10} /> Checked In
+                  </span>
+                ) : null}
               </div>
             </div>
           </div>
@@ -1061,7 +1257,37 @@ export default function AdminPortal() {
               </div>
             </div>
           )}
-          <div style={{ display: "flex", gap: 10, marginTop: 20 }}>
+
+          {/* Quick Manual Verification Status Changer in Modal */}
+          <div style={{ display: "flex", gap: 10, marginTop: 16, background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)", borderRadius: 12, padding: 12, alignItems: "center" }}>
+            <span style={{ fontSize: "0.78rem", fontWeight: 700, color: "#94a3b8", display: "flex", alignItems: "center", gap: 6 }}>
+              Quick Status:
+            </span>
+            <div style={{ display: "flex", gap: 6, flex: 1, justifyContent: "flex-end" }}>
+              <button
+                onClick={() => {
+                  handleInterviewStatusChange(viewItem._id, viewItem.verified ? "Absent" : "CheckedIn");
+                  setViewItem(prev => prev ? { ...prev, verified: !prev.verified, interviewDone: false } : null);
+                }}
+                style={{ padding: "6px 12px", borderRadius: 8, background: viewItem.verified ? "rgba(251,113,133,0.1)" : "rgba(52,211,153,0.1)", border: `1px solid ${viewItem.verified ? "rgba(251,113,133,0.3)" : "rgba(52,211,153,0.3)"}`, color: viewItem.verified ? "#fb7185" : "#34d399", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+              >
+                {viewItem.verified ? "Cancel Check-in" : "Verify Check-in"}
+              </button>
+              {viewItem.verified && (
+                <button
+                  onClick={() => {
+                    handleInterviewStatusChange(viewItem._id, viewItem.interviewDone ? "CheckedIn" : "Done");
+                    setViewItem(prev => prev ? { ...prev, interviewDone: !prev.interviewDone } : null);
+                  }}
+                  style={{ padding: "6px 12px", borderRadius: 8, background: viewItem.interviewDone ? "rgba(255,255,255,0.05)" : "rgba(167,139,250,0.1)", border: `1px solid ${viewItem.interviewDone ? "rgba(255,255,255,0.1)" : "rgba(167,139,250,0.3)"}`, color: viewItem.interviewDone ? "#cbd5e1" : "#a78bfa", fontSize: "0.75rem", fontWeight: 700, cursor: "pointer" }}
+                >
+                  {viewItem.interviewDone ? "Mark Interview Pending" : "Mark Interview Done"}
+                </button>
+              )}
+            </div>
+          </div>
+
+          <div style={{ display: "flex", gap: 10, marginTop: 16 }}>
             <button onClick={() => { setViewItem(null); setEditItem(viewItem); }} style={{ flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: "11px", background: "linear-gradient(135deg,#6382ff,#a78bfa)", color: "white", fontWeight: 700, fontSize: "0.875rem", border: "none", borderRadius: 10, cursor: "pointer", fontFamily: "inherit" }}>
               <Pencil size={14} /> Edit Record
             </button>

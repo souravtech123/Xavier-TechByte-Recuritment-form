@@ -13,6 +13,7 @@ export interface IRegistration extends Document {
   status: "Pending" | "Selected" | "Rejected";
   qrToken?: string;
   verified: boolean;
+  interviewDone: boolean;
   createdAt: Date;
 }
 
@@ -80,6 +81,11 @@ const RegistrationSchema = new Schema<IRegistration>(
     },
 
     verified: {
+      type: Boolean,
+      default: false,
+    },
+
+    interviewDone: {
       type: Boolean,
       default: false,
     },

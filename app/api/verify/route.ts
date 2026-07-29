@@ -39,6 +39,7 @@ export async function GET(req: NextRequest) {
         skills: registration.skills,
         status: registration.status,
         verified: registration.verified,
+        interviewDone: registration.interviewDone || false,
       },
     });
   } catch (error) {
@@ -50,13 +51,13 @@ export async function GET(req: NextRequest) {
   }
 }
 
-// POST /api/verify — mark a participant as verified (checked in for interview)
+// POST /api/verify — verify check-in OR mark interview done
 export async function POST(req: Request) {
   try {
     await connectDB();
 
     const body = await req.json();
-    const { token } = body;
+    const { token, action } = body;
 
     if (!token) {
       return NextResponse.json(
@@ -74,6 +75,31 @@ export async function POST(req: Request) {
       );
     }
 
+    // If marking interview completed
+    if (action === "done") {
+      const updated = await Registration.findOneAndUpdate(
+        { qrToken: token },
+        { interviewDone: true, verified: true }, // Ensure they are verified too
+        { new: true }
+      );
+
+      return NextResponse.json({
+        success: true,
+        data: {
+          _id: updated!._id,
+          fullName: updated!.fullName,
+          course: updated!.course,
+          semester: updated!.semester,
+          interest: updated!.interest,
+          skills: updated!.skills,
+          status: updated!.status,
+          verified: updated!.verified,
+          interviewDone: updated!.interviewDone || false,
+        },
+      });
+    }
+
+    // Default verify (Check-in) behavior
     if (registration.verified) {
       return NextResponse.json({
         success: true,
@@ -87,6 +113,7 @@ export async function POST(req: Request) {
           skills: registration.skills,
           status: registration.status,
           verified: registration.verified,
+          interviewDone: registration.interviewDone || false,
         },
       });
     }
@@ -109,6 +136,7 @@ export async function POST(req: Request) {
         skills: updated!.skills,
         status: updated!.status,
         verified: updated!.verified,
+        interviewDone: updated!.interviewDone || false,
       },
     });
   } catch (error) {

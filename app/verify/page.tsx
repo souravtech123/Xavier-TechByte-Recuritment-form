@@ -16,6 +16,7 @@ interface ParticipantData {
   skills: string;
   status: string;
   verified: boolean;
+  interviewDone: boolean;
 }
 
 type VerifyState =
@@ -32,16 +33,17 @@ type VerifyState =
 function VerifyInner() {
   const searchParams = useSearchParams();
   const [state, setState] = useState<VerifyState>({ mode: "idle" });
+  const [scannedToken, setScannedToken] = useState<string>("");
   const scannerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerInstanceRef = useRef<any>(null);
   const [scannerReady, setScannerReady] = useState(false);
-  const [scannerActive, setScannerActive] = useState(false);
 
   /* ---- Auto-verify from URL token ---- */
   useEffect(() => {
     const token = searchParams.get("token");
     if (token) {
+      setScannedToken(token);
       verifyToken(token);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -58,11 +60,80 @@ function VerifyInner() {
     script.async = true;
     script.onload = () => setScannerReady(true);
     document.head.appendChild(script);
+  }, []);
+
+  /* ---- Start camera scanner using React lifecycle ---- */
+  useEffect(() => {
+    let active = true;
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let scanner: any = null;
+
+    async function initScanner() {
+      if (state.mode !== "scanning") return;
+
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      const Html5Qrcode = (window as any).Html5Qrcode;
+      if (!Html5Qrcode) {
+        setState({ mode: "error", message: "Scanner library is loading. Please try again." });
+        return;
+      }
+
+      // Wait a paint cycle so React renders #xts-qr-reader in the DOM
+      await new Promise((resolve) => setTimeout(resolve, 150));
+      if (!active) return;
+
+      try {
+        scanner = new Html5Qrcode("xts-qr-reader");
+        scannerInstanceRef.current = scanner;
+
+        await scanner.start(
+          { facingMode: "environment" },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          async (decodedText: string) => {
+            // Stop scanner immediately
+            if (scanner) {
+              try {
+                await scanner.stop();
+                scanner.clear();
+              } catch (e) {}
+              scannerInstanceRef.current = null;
+              scanner = null;
+            }
+
+            // Extract token
+            let token = decodedText;
+            try {
+              const url = new URL(decodedText);
+              const t = url.searchParams.get("token");
+              if (t) token = t;
+            } catch {}
+
+            setScannedToken(token);
+            await verifyToken(token);
+          },
+          () => { /* ignore frame errors */ }
+        );
+      } catch (err) {
+        if (active) {
+          setState({
+            mode: "error",
+            message: "Camera access denied or scanner error. Please allow camera permissions.",
+          });
+        }
+        console.error(err);
+      }
+    }
+
+    initScanner();
 
     return () => {
-      // cleanup is handled by stopScanner
+      active = false;
+      if (scanner) {
+        scanner.stop().then(() => scanner.clear()).catch(() => {});
+        scannerInstanceRef.current = null;
+      }
     };
-  }, []);
+  }, [state.mode]);
 
   /* ---- Verify token via API ---- */
   async function verifyToken(token: string) {
@@ -84,64 +155,38 @@ function VerifyInner() {
     }
   }
 
-  /* ---- Start camera scanner ---- */
-  async function startScanner() {
-    if (!scannerReady) return;
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const Html5Qrcode = (window as any).Html5Qrcode;
-    if (!Html5Qrcode || !scannerRef.current) return;
-
-    setScannerActive(true);
-    setState({ mode: "scanning" });
-
+  /* ---- Complete Interview Flow ---- */
+  async function completeInterview() {
+    if (!scannedToken) return;
+    setState({ mode: "loading" });
     try {
-      const scanner = new Html5Qrcode("xts-qr-reader");
-      scannerInstanceRef.current = scanner;
-
-      await scanner.start(
-        { facingMode: "environment" },
-        { fps: 10, qrbox: { width: 250, height: 250 } },
-        async (decodedText: string) => {
-          // Stop scanner before processing
-          await stopScanner(false);
-
-          // Extract token from URL if the QR encodes a full URL
-          let token = decodedText;
-          try {
-            const url = new URL(decodedText);
-            const t = url.searchParams.get("token");
-            if (t) token = t;
-          } catch {
-            // not a URL, use as-is
-          }
-
-          await verifyToken(token);
-        },
-        () => { /* frame errors — ignore */ }
-      );
-    } catch (err) {
-      setScannerActive(false);
-      setState({ mode: "error", message: "Camera access denied. Please allow camera permission and retry." });
-      console.error(err);
+      const res = await fetch("/api/verify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: scannedToken, action: "done" }),
+      });
+      const json = await res.json();
+      if (!json.success) {
+        setState({ mode: "error", message: json.message || "Failed to complete interview." });
+      } else {
+        setState({ mode: "success", data: json.data, alreadyVerified: false });
+      }
+    } catch {
+      setState({ mode: "error", message: "Network error. Please try again." });
     }
   }
 
-  /* ---- Stop scanner ---- */
-  async function stopScanner(resetState = true) {
-    if (scannerInstanceRef.current) {
-      try {
-        await scannerInstanceRef.current.stop();
-        scannerInstanceRef.current.clear();
-      } catch {/* already stopped */}
-      scannerInstanceRef.current = null;
-    }
-    setScannerActive(false);
-    if (resetState) setState({ mode: "idle" });
+  function startScanning() {
+    setState({ mode: "scanning" });
   }
 
-  /* ---- Reset ---- */
+  function cancelScanning() {
+    setState({ mode: "idle" });
+  }
+
   function reset() {
-    stopScanner(true);
+    setState({ mode: "idle" });
+    setScannedToken("");
   }
 
   /* ================================================================ */
@@ -180,7 +225,7 @@ function VerifyInner() {
             </div>
             <div>
               <p style={{ fontSize: "1rem", fontWeight: 800, color: "white", letterSpacing: "-0.3px" }}>XTS Verification</p>
-              <p style={{ fontSize: "0.65rem", color: "#64748b" }}>Xavier TechByte — Interview Check-In</p>
+              <p style={{ fontSize: "0.65rem", color: "#64748b" }}>Xavier TechByte — Mobile Scanner Portal</p>
             </div>
           </div>
         </header>
@@ -199,31 +244,29 @@ function VerifyInner() {
                 </div>
                 <h1 style={{ fontSize: "1.4rem", fontWeight: 900, color: "white", marginBottom: 8 }}>Scan Participant QR</h1>
                 <p style={{ fontSize: "0.85rem", color: "#64748b", lineHeight: 1.6 }}>
-                  Point the camera at a participant's QR code to verify their interview slot.
+                  Point the camera at a participant's QR code to verify check-in and unlock interview options.
                 </p>
               </div>
 
               <button
                 id="start-scanner-btn"
-                onClick={startScanner}
+                onClick={startScanning}
                 disabled={!scannerReady}
                 style={{ width: "100%", padding: "16px", borderRadius: 14, background: "linear-gradient(135deg,#6382ff,#a78bfa)", color: "white", fontSize: "1rem", fontWeight: 800, border: "none", cursor: scannerReady ? "pointer" : "not-allowed", opacity: scannerReady ? 1 : 0.6, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 6px 30px rgba(99,130,255,0.4)", transition: "transform 0.15s, box-shadow 0.15s", letterSpacing: "-0.2px" }}
-                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 10px 40px rgba(99,130,255,0.5)"; }}
-                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.transform = "none"; (e.currentTarget as HTMLButtonElement).style.boxShadow = "0 6px 30px rgba(99,130,255,0.4)"; }}
               >
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M23 7V1h-6M1 7V1h6M1 17v6h6M23 17v6h-6"/><rect x="7" y="7" width="10" height="10" rx="2"/>
                 </svg>
-                {scannerReady ? "Open Camera & Scan" : "Loading scanner…"}
+                {scannerReady ? "Open Camera & Scan" : "Loading Scanner…"}
               </button>
 
-              {/* Instruction cards */}
+              {/* Instructions list */}
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 20 }}>
                 {[
-                  { icon: "📱", title: "Mobile Ready", desc: "Optimised for any smartphone camera" },
-                  { icon: "⚡", title: "Instant", desc: "Real-time QR recognition" },
-                  { icon: "✅", title: "One-time", desc: "Each QR can only be verified once" },
-                  { icon: "🔒", title: "Secure", desc: "Unique token per participant" },
+                  { icon: "📱", title: "Mobile Ready", desc: "Use on any smartphone device" },
+                  { icon: "⚡", title: "Verify Scan", desc: "Auto-registers attendance" },
+                  { icon: "💬", title: "Interview Status", desc: "Track candidate process" },
+                  { icon: "✅", title: "Complete", desc: "Mark interviews done on site" },
                 ].map(({ icon, title, desc }) => (
                   <div key={title} style={{ background: "#0d1526", border: "1px solid rgba(99,130,255,0.1)", borderRadius: 12, padding: "14px 12px" }}>
                     <p style={{ fontSize: "1.3rem", marginBottom: 5 }}>{icon}</p>
@@ -241,10 +284,10 @@ function VerifyInner() {
               <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
                 <div>
                   <p style={{ fontSize: "1rem", fontWeight: 700, color: "white" }}>Camera Active</p>
-                  <p style={{ fontSize: "0.72rem", color: "#64748b" }}>Point at the QR code</p>
+                  <p style={{ fontSize: "0.72rem", color: "#64748b" }}>Align the QR code within the frame</p>
                 </div>
                 <button
-                  onClick={() => stopScanner(true)}
+                  onClick={cancelScanning}
                   style={{ padding: "7px 14px", borderRadius: 8, background: "rgba(251,113,133,0.1)", border: "1px solid rgba(251,113,133,0.3)", color: "#fb7185", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
                 >
                   Cancel
@@ -268,10 +311,6 @@ function VerifyInner() {
                   <div style={{ width: "60%", height: 2, background: "linear-gradient(90deg,transparent,#6382ff,transparent)", animation: "xts-pulse 1.5s ease infinite", borderRadius: 1 }} />
                 </div>
               </div>
-
-              <p style={{ textAlign: "center", fontSize: "0.78rem", color: "#475569", marginTop: 12 }}>
-                Align the QR code within the frame
-              </p>
             </div>
           )}
 
@@ -284,57 +323,87 @@ function VerifyInner() {
                 </svg>
               </div>
               <div style={{ textAlign: "center" }}>
-                <p style={{ fontWeight: 700, color: "white", fontSize: "1rem" }}>Verifying…</p>
-                <p style={{ color: "#64748b", fontSize: "0.8rem", marginTop: 4 }}>Checking participant record</p>
+                <p style={{ fontWeight: 700, color: "white", fontSize: "1rem" }}>Updating Database…</p>
+                <p style={{ color: "#64748b", fontSize: "0.8rem", marginTop: 4 }}>Processing registration state</p>
               </div>
             </div>
           )}
 
           {/* ── SUCCESS ── */}
           {state.mode === "success" && (
-            <div style={{ animation: "xts-pop 0.4s cubic-bezier(.34,1.56,.64,1)" }}>
+            <div style={{ animation: "xts-pop 0.4s cubic-bezier(.34,1.56,.64,1)", display: "flex", flexDirection: "column", gap: 16 }}>
               {/* Status banner */}
               <div style={{
                 borderRadius: 18,
                 padding: "20px",
-                marginBottom: 16,
-                background: state.alreadyVerified
+                background: state.data.interviewDone
+                  ? "linear-gradient(135deg,rgba(99,130,255,0.1),rgba(167,139,250,0.05))"
+                  : state.alreadyVerified
                   ? "linear-gradient(135deg,rgba(251,191,36,0.08),rgba(251,191,36,0.03))"
                   : "linear-gradient(135deg,rgba(52,211,153,0.1),rgba(52,211,153,0.03))",
-                border: `1px solid ${state.alreadyVerified ? "rgba(251,191,36,0.3)" : "rgba(52,211,153,0.3)"}`,
+                border: `1px solid ${
+                  state.data.interviewDone
+                    ? "rgba(167,139,250,0.3)"
+                    : state.alreadyVerified
+                    ? "rgba(251,191,36,0.3)"
+                    : "rgba(52,211,153,0.3)"
+                }`,
               }}>
                 <div style={{ display: "flex", alignItems: "center", gap: 14, marginBottom: 16 }}>
                   <div style={{ fontSize: "2.5rem", lineHeight: 1 }}>
-                    {state.alreadyVerified ? "⚠️" : "✅"}
+                    {state.data.interviewDone ? "🎓" : state.alreadyVerified ? "⚠️" : "✅"}
                   </div>
                   <div>
                     <p style={{ fontSize: "1.1rem", fontWeight: 900, color: "white", letterSpacing: "-0.3px" }}>
-                      {state.alreadyVerified ? "Already Verified" : "Verified!"}
+                      {state.data.interviewDone
+                        ? "Interview Done!"
+                        : state.alreadyVerified
+                        ? "Already Checked In"
+                        : "Verified!"}
                     </p>
-                    <p style={{ fontSize: "0.8rem", color: state.alreadyVerified ? "#fbbf24" : "#34d399", fontWeight: 600 }}>
-                      {state.alreadyVerified
-                        ? "This QR code was already scanned"
-                        : "Ready for Interview ✓"}
+                    <p style={{ fontSize: "0.8rem", color: state.data.interviewDone ? "#a78bfa" : state.alreadyVerified ? "#fbbf24" : "#34d399", fontWeight: 600 }}>
+                      {state.data.interviewDone
+                        ? "Interview status is complete ✓"
+                        : "Verified & ready to interview ✓"}
                     </p>
                   </div>
                 </div>
 
                 {/* Participant info */}
                 <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
-                  <InfoRow icon="👤" label="Name" value={state.data.fullName} highlight />
+                  <InfoRow icon="👤" label="Candidate Name" value={state.data.fullName} highlight />
                   <InfoRow icon="🎓" label="Course" value={`${state.data.course} — ${state.data.semester}`} />
                   <InfoRow icon="⭐" label="Interest" value={state.data.interest} />
                   <InfoRow icon="🔧" label="Skills" value={state.data.skills} />
-                  <div style={{ marginTop: 4 }}>
+                  <div style={{ marginTop: 4, display: "flex", gap: 6 }}>
                     <StatusPill status={state.data.status} />
+                    <span style={{ display: "inline-flex", alignItems: "center", padding: "4px 12px", borderRadius: 999, fontSize: "0.75rem", fontWeight: 700, background: state.data.interviewDone ? "rgba(167,139,250,0.15)" : "rgba(52,211,153,0.15)", border: `1px solid ${state.data.interviewDone ? "rgba(167,139,250,0.3)" : "rgba(52,211,153,0.3)"}`, color: state.data.interviewDone ? "#a78bfa" : "#34d399" }}>
+                      {state.data.interviewDone ? "Interview Completed" : "Ready To Interview"}
+                    </span>
                   </div>
                 </div>
               </div>
 
+              {/* Action: Interview Done active button */}
+              {!state.data.interviewDone && (
+                <button
+                  id="mark-interview-done-btn"
+                  onClick={completeInterview}
+                  style={{ width: "100%", padding: "16px", borderRadius: 14, background: "linear-gradient(135deg,#a78bfa,#f472b6)", color: "white", fontSize: "1rem", fontWeight: 800, border: "none", cursor: "pointer", display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 6px 20px rgba(167,139,250,0.4)" }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+                  </svg>
+                  Mark Interview as Done
+                </button>
+              )}
+
               <button
                 id="scan-again-btn"
                 onClick={reset}
-                style={{ width: "100%", padding: "14px", borderRadius: 12, background: "linear-gradient(135deg,#6382ff,#a78bfa)", color: "white", fontSize: "0.95rem", fontWeight: 800, border: "none", cursor: "pointer", boxShadow: "0 4px 20px rgba(99,130,255,0.35)", letterSpacing: "-0.2px" }}
+                style={{ width: "100%", padding: "14px", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e2e8f0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", transition: "all 0.15s" }}
+                onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.1)"; }}
+                onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.background = "rgba(255,255,255,0.06)"; }}
               >
                 Scan Next Participant
               </button>
@@ -346,7 +415,7 @@ function VerifyInner() {
             <div style={{ animation: "xts-pop 0.35s ease" }}>
               <div style={{ borderRadius: 18, padding: "24px 20px", background: "rgba(251,113,133,0.06)", border: "1px solid rgba(251,113,133,0.25)", textAlign: "center", marginBottom: 16 }}>
                 <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>❌</div>
-                <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "white", marginBottom: 6 }}>Verification Failed</p>
+                <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "white", marginBottom: 6 }}>Scan Failed</p>
                 <p style={{ fontSize: "0.85rem", color: "#fb7185", lineHeight: 1.5 }}>{state.message}</p>
               </div>
 
@@ -372,7 +441,7 @@ function VerifyInner() {
 
 function InfoRow({ icon, label, value, highlight }: { icon: string; label: string; value: string; highlight?: boolean }) {
   return (
-    <div style={{ display: "flex", gap: 10, padding: "10px 12px", background: "rgba(0,0,0,0.2)", borderRadius: 10, alignItems: "flex-start" }}>
+    <div style={{ display: "flex", gap: 10, padding: "10px 12px", background: "rgba(0,0,0,0.25)", borderRadius: 10, alignItems: "flex-start" }}>
       <span style={{ fontSize: "0.95rem", flexShrink: 0, marginTop: 1 }}>{icon}</span>
       <div>
         <p style={{ fontSize: "0.62rem", color: "#475569", textTransform: "uppercase", letterSpacing: "0.05em", fontWeight: 700, marginBottom: 2 }}>{label}</p>
