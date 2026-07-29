@@ -508,6 +508,7 @@ export default function AdminPortal() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
   const [addOpen, setAddOpen] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [sendingMailId, setSendingMailId] = useState<string | null>(null);
   const [toastMsg, setToastMsg] = useState<string | null>(null);
 
   /* fetch */
@@ -586,6 +587,24 @@ export default function AdminPortal() {
       toast(err instanceof Error ? err.message : "Failed to delete.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleSendMail = async (reg: Registration) => {
+    setSendingMailId(reg._id);
+    try {
+      const res = await fetch("/api/send-confirmation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: reg.fullName, email: reg.email }),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.message || "Failed to send mail.");
+      toast(`✉️ Mail sent to ${reg.fullName}!`);
+    } catch (err: unknown) {
+      toast(err instanceof Error ? err.message : "Failed to send mail.");
+    } finally {
+      setSendingMailId(null);
     }
   };
 
@@ -784,6 +803,31 @@ export default function AdminPortal() {
                               <Ic size={13} color={color} />
                             </button>
                           ))}
+                          {/* Send Mail button */}
+                          <button
+                            id={`send-mail-${reg._id}`}
+                            title="Send Confirmation Mail"
+                            disabled={sendingMailId === reg._id}
+                            onClick={() => handleSendMail(reg)}
+                            className="xts-action"
+                            style={{
+                              width: 32,
+                              height: 32,
+                              borderRadius: 8,
+                              background: sendingMailId === reg._id ? "rgba(52,211,153,0.05)" : "rgba(52,211,153,0.1)",
+                              border: "1px solid rgba(52,211,153,0.3)",
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              cursor: sendingMailId === reg._id ? "not-allowed" : "pointer",
+                              transition: "opacity 0.15s",
+                              opacity: sendingMailId === reg._id ? 0.5 : 1,
+                            }}
+                          >
+                            {sendingMailId === reg._id
+                              ? <Loader2 size={13} color="#34d399" style={{ animation: "xts-spin 1s linear infinite" }} />
+                              : <Mail size={13} color="#34d399" />}
+                          </button>
                         </div>
                       </td>
                     </tr>
