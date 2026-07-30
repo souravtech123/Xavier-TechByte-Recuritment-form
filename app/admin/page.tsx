@@ -1154,10 +1154,10 @@ export default function AdminPortal() {
                               }
                               
                               const base = window.location.origin;
-                              const verifyUrl = `${base}/verify?token=${token}`;
+                              const ticketUrl = `${base}/ticket?token=${token}`;
                               const waNumber = toWhatsAppNumber(reg.phone);
                               const waMessage = encodeURIComponent(
-                                `🌟 *Xavier TechByte Society Recruitment '26* 🌟\n\nHello *${reg.fullName}*,\n\nYour registration is confirmed! Below is your unique entry key for the interview stage.\n\n📅 *Status*: Ready for Interview\n🔑 *Your Entry QR Code Link*:\n${verifyUrl}\n\n*Instructions*:\n1. Open the link above to view your ticket and QR code.\n2. Show the QR code to the venue checker on arrival.\n\nSee you there! All the best! 🚀`
+                                `🌟 *Xavier TechByte Society Recruitment '26* 🌟\n\nHello *${reg.fullName}*,\n\nYour registration is confirmed! Below is your unique entry key for the interview stage.\n\n📅 *Status*: Ready for Interview\n🔑 *Your Entry QR Code Link*:\n${ticketUrl}\n\n*Instructions*:\n1. Open the link above to view your ticket and QR code.\n2. Show the QR code to the venue checker on arrival.\n\nSee you there! All the best! 🚀`
                               );
                               window.open(`https://wa.me/${waNumber}?text=${waMessage}`, "_blank");
                             }, title: "Send Ticket via WhatsApp" },

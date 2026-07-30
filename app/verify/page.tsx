@@ -33,18 +33,21 @@ type VerifyState =
 function VerifyInner() {
   const searchParams = useSearchParams();
   const [state, setState] = useState<VerifyState>({ mode: "idle" });
-  const [scannedToken, setScannedToken] = useState<string>("");
+  // scannedPayload holds the raw encrypted string from the QR
+  const [scannedPayload, setScannedPayload] = useState<string>("");
+  // resolvedToken holds the UUID returned by the server after decrypt (for interview-done call)
+  const [resolvedToken, setResolvedToken] = useState<string>("");
   const scannerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   const scannerInstanceRef = useRef<any>(null);
   const [scannerReady, setScannerReady] = useState(false);
 
-  /* ---- Auto-verify from URL token ---- */
+  /* ---- Auto-verify from URL token (legacy direct-URL flow) ---- */
   useEffect(() => {
     const token = searchParams.get("token");
     if (token) {
-      setScannedToken(token);
-      verifyToken(token);
+      // Legacy path: token in URL — verify directly
+      verifyPayload(token, true);
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -100,16 +103,10 @@ function VerifyInner() {
               scanner = null;
             }
 
-            // Extract token
-            let token = decodedText;
-            try {
-              const url = new URL(decodedText);
-              const t = url.searchParams.get("token");
-              if (t) token = t;
-            } catch {}
-
-            setScannedToken(token);
-            await verifyToken(token);
+            // The QR encodes an encrypted payload (not a URL)
+            // Send it raw to the API — the server decrypts it
+            setScannedPayload(decodedText);
+            await verifyPayload(decodedText, false);
           },
           () => { /* ignore frame errors */ }
         );
@@ -135,19 +132,27 @@ function VerifyInner() {
     };
   }, [state.mode]);
 
-  /* ---- Verify token via API ---- */
-  async function verifyToken(token: string) {
+  /* ---- Verify payload via API ---- */
+  // isLegacyToken: true means the value is a raw UUID from a URL (legacy)
+  //                false means it's an encrypted QR payload (new flow)
+  async function verifyPayload(value: string, isLegacyToken: boolean) {
     setState({ mode: "loading" });
     try {
+      const body = isLegacyToken
+        ? { token: value }          // legacy URL path
+        : { payload: value };       // encrypted QR path
+
       const res = await fetch("/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!json.success) {
         setState({ mode: "error", message: json.message || "Verification failed." });
       } else {
+        // Server returns the resolved token so we can call completeInterview later
+        if (json.resolvedToken) setResolvedToken(json.resolvedToken);
         setState({ mode: "success", data: json.data, alreadyVerified: json.alreadyVerified });
       }
     } catch {
@@ -157,13 +162,19 @@ function VerifyInner() {
 
   /* ---- Complete Interview Flow ---- */
   async function completeInterview() {
-    if (!scannedToken) return;
+    // Use resolvedToken (from server after decrypt) for the interview-done call
+    const tokenToUse = resolvedToken || scannedPayload;
+    if (!tokenToUse) return;
     setState({ mode: "loading" });
     try {
+      const body = resolvedToken
+        ? { token: resolvedToken, action: "done" }   // have the resolved UUID
+        : { payload: scannedPayload, action: "done" }; // fallback: send payload again
+
       const res = await fetch("/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: scannedToken, action: "done" }),
+        body: JSON.stringify(body),
       });
       const json = await res.json();
       if (!json.success) {
@@ -186,7 +197,8 @@ function VerifyInner() {
 
   function reset() {
     setState({ mode: "idle" });
-    setScannedToken("");
+    setScannedPayload("");
+    setResolvedToken("");
   }
 
   /* ================================================================ */
