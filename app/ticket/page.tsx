@@ -26,7 +26,10 @@ function TicketInner() {
   const [qrPayload, setQrPayload] = useState<string | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
 
+  const [origin, setOrigin] = useState("");
+
   useEffect(() => {
+    setOrigin(window.location.origin);
     const token = searchParams.get("token");
     if (!token) {
       setError("Ticket token is missing in the URL.");
@@ -121,8 +124,9 @@ function TicketInner() {
     );
   }
 
-  // qrPayload is the encrypted blob — other scanners see gibberish, only /verify works
-  const qrValue = qrPayload || `INVALID-NO-PAYLOAD`;
+  // qrPayload is the encrypted blob. We wrap it in a URL so generic scanners
+  // are redirected to a helpful "Invalid Scanner" page instead of showing raw text.
+  const qrValue = qrPayload ? `${origin}/invalid-qr?data=${qrPayload}` : `INVALID-NO-PAYLOAD`;
 
   return (
     <div style={{ minHeight: "100vh", background: "#020617", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px" }}>

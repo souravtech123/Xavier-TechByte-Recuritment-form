@@ -256,8 +256,10 @@ function QRModal({
   const [sharing, setSharing] = useState(false);
   const [sharePhone, setSharePhone] = useState(reg.phone);
   const [qrPayload, setQrPayload] = useState<string | null>(null);
+  const [origin, setOrigin] = useState("");
 
   useEffect(() => {
+    setOrigin(window.location.origin);
     if (reg.qrToken) {
       fetch(`/api/ticket/qr-payload?token=${reg.qrToken}`)
         .then((res) => res.json())
@@ -449,7 +451,7 @@ function QRModal({
           <div style={{ background: "white", borderRadius: 20, padding: 18, boxShadow: "0 8px 40px rgba(0,0,0,0.6)", position: "relative" }}>
             <QRCodeSVG
               id="xts-qr-svg"
-              value={qrPayload || "INVALID-NO-PAYLOAD"}
+              value={qrPayload ? `${origin}/invalid-qr?data=${qrPayload}` : "INVALID-NO-PAYLOAD"}
               size={200}
               level="H"
               includeMargin={false}

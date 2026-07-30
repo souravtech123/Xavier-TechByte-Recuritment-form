@@ -104,10 +104,19 @@ function VerifyInner() {
               scanner = null;
             }
 
-            // The QR encodes an encrypted payload (not a URL)
-            // Send it raw to the API — the server decrypts it
-            setScannedPayload(decodedText);
-            await verifyPayload(decodedText, false);
+            // The QR now encodes a URL pointing to /invalid-qr?data=...
+            // If we scan it with this official scanner, we extract the payload.
+            // If someone scans with Google Lens, it just opens the "Invalid Scanner" webpage!
+            let extractedPayload = decodedText;
+            try {
+              if (decodedText.includes("/invalid-qr?data=")) {
+                const url = new URL(decodedText);
+                extractedPayload = url.searchParams.get("data") || decodedText;
+              }
+            } catch (e) {}
+
+            setScannedPayload(extractedPayload);
+            await verifyPayload(extractedPayload, false);
           },
           () => { /* ignore frame errors */ }
         );
