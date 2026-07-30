@@ -108,12 +108,9 @@ function VerifyInner() {
             // If we scan it with this official scanner, we extract the payload.
             // If someone scans with Google Lens, it just opens the "Invalid Scanner" webpage!
             let extractedPayload = decodedText;
-            try {
-              if (decodedText.includes("/invalid-qr?data=")) {
-                const url = new URL(decodedText);
-                extractedPayload = url.searchParams.get("data") || decodedText;
-              }
-            } catch (e) {}
+            if (decodedText.includes("data=")) {
+              extractedPayload = decodedText.split("data=")[1];
+            }
 
             setScannedPayload(extractedPayload);
             await verifyPayload(extractedPayload, false);
