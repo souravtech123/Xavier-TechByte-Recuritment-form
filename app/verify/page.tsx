@@ -23,7 +23,7 @@ interface ParticipantData {
 type VerifyState =
   | { mode: "idle" }
   | { mode: "scanning" }
-  | { mode: "loading" }
+  | { mode: "loading"; text?: string }
   | { mode: "success"; data: ParticipantData; alreadyVerified: boolean }
   | { mode: "error"; message: string };
 
@@ -113,6 +113,11 @@ function VerifyInner() {
             }
 
             setScannedPayload(extractedPayload);
+            
+            // Artificial 4.5-second decryption simulation to enhance the "XTS Scanner" feel
+            setState({ mode: "loading", text: "Decrypting XTS Payload…" });
+            await new Promise(resolve => setTimeout(resolve, 4500));
+
             await verifyPayload(extractedPayload, false);
           },
           () => { /* ignore frame errors */ }
@@ -143,7 +148,7 @@ function VerifyInner() {
   // isLegacyToken: true means the value is a raw UUID from a URL (legacy)
   //                false means it's an encrypted QR payload (new flow)
   async function verifyPayload(value: string, isLegacyToken: boolean) {
-    setState({ mode: "loading" });
+    setState({ mode: "loading", text: "Updating Database…" });
     try {
       const body = isLegacyToken
         ? { token: value }          // legacy URL path
@@ -172,7 +177,7 @@ function VerifyInner() {
     // Use resolvedToken (from server after decrypt) for the interview-done call
     const tokenToUse = resolvedToken || scannedPayload;
     if (!tokenToUse) return;
-    setState({ mode: "loading" });
+    setState({ mode: "loading", text: "Marking Complete…" });
     try {
       const body = resolvedToken
         ? { token: resolvedToken, action: "done" }   // have the resolved UUID
@@ -327,15 +332,16 @@ function VerifyInner() {
 
           {/* ── LOADING ── */}
           {state.mode === "loading" && (
-            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16, padding: "60px 0", animation: "xts-fadein 0.3s ease" }}>
-              <div style={{ width: 56, height: 56, borderRadius: 16, background: "rgba(99,130,255,0.1)", border: "1px solid rgba(99,130,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center" }}>
-                <svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="#6382ff" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "xts-spin 1s linear infinite" }}>
+            <div style={{ display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 20, padding: "80px 0", animation: "xts-fadein 0.3s ease" }}>
+              <div style={{ width: 72, height: 72, borderRadius: 20, background: "rgba(99,130,255,0.1)", border: "1px solid rgba(99,130,255,0.2)", display: "flex", alignItems: "center", justifyContent: "center", position: "relative" }}>
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="#6382ff" strokeWidth="2.5" strokeLinecap="round" style={{ animation: "xts-spin 1s linear infinite" }}>
                   <path d="M21 12a9 9 0 11-6.219-8.56"/>
                 </svg>
+                <div style={{ position: "absolute", inset: "-4px", borderRadius: 24, border: "2px solid rgba(167,139,250,0.5)", animation: "xts-pulse 1.5s infinite" }} />
               </div>
               <div style={{ textAlign: "center" }}>
-                <p style={{ fontWeight: 700, color: "white", fontSize: "1rem" }}>Updating Database…</p>
-                <p style={{ color: "#64748b", fontSize: "0.8rem", marginTop: 4 }}>Processing registration state</p>
+                <p style={{ fontWeight: 900, color: "white", fontSize: "1.1rem", textTransform: "uppercase", letterSpacing: "1px" }}>{state.text || "Processing…"}</p>
+                <p style={{ color: "#94a3b8", fontSize: "0.85rem", marginTop: 8 }}>Establishing secure connection</p>
               </div>
             </div>
           )}
