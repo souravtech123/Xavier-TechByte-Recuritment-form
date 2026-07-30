@@ -2,6 +2,7 @@
 
 import { useEffect, useState, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
+import { Lock, ShieldCheck, QrCode, ScanLine, AlertCircle, CheckCircle2 } from "lucide-react";
 
 /* ------------------------------------------------------------------ */
 /* Types                                                               */
@@ -213,9 +214,9 @@ function VerifyInner() {
     @keyframes xts-spin { from{transform:rotate(0deg)} to{transform:rotate(360deg)} }
     @keyframes xts-fadein { from{opacity:0;transform:translateY(16px)} to{opacity:1;transform:translateY(0)} }
     @keyframes xts-pop { 0%{transform:scale(0.85);opacity:0} 70%{transform:scale(1.05)} 100%{transform:scale(1);opacity:1} }
-    @keyframes corner-anim { 0%,100%{border-color:#6382ff} 50%{border-color:#a78bfa} }
+    @keyframes xts-laser { 0%,100%{transform:translateY(-140px);opacity:0} 10%{opacity:1} 50%{transform:translateY(140px);opacity:1} 90%{opacity:1} }
     #xts-qr-reader { width: 100% !important; border: none !important; background: transparent !important; }
-    #xts-qr-reader video { width: 100% !important; border-radius: 16px !important; }
+    #xts-qr-reader video { width: 100% !important; border-radius: 20px !important; object-fit: cover !important; }
     #xts-qr-reader img { display: none !important; }
     #xts-qr-reader button { display: none !important; }
     #xts-qr-reader select { display: none !important; }
@@ -230,14 +231,11 @@ function VerifyInner() {
         <header style={{ width: "100%", padding: "20px 20px 16px", display: "flex", flexDirection: "column", alignItems: "center", gap: 10, borderBottom: "1px solid rgba(99,130,255,0.1)", background: "rgba(6,10,18,0.8)", backdropFilter: "blur(20px)", position: "sticky", top: 0, zIndex: 20 }}>
           <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
             <div style={{ width: 36, height: 36, borderRadius: 10, background: "linear-gradient(135deg,#6382ff,#a78bfa)", display: "flex", alignItems: "center", justifyContent: "center", boxShadow: "0 0 20px rgba(99,130,255,0.5)" }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-                <path d="M14 14h3v3h-3zM17 17h3v3h-3zM14 17h0M17 14h0"/>
-              </svg>
+              <Lock size={18} color="white" />
             </div>
             <div>
-              <p style={{ fontSize: "1rem", fontWeight: 800, color: "white", letterSpacing: "-0.3px" }}>XTS Verification</p>
-              <p style={{ fontSize: "0.65rem", color: "#64748b" }}>Xavier TechByte — Mobile Scanner Portal</p>
+              <p style={{ fontSize: "1rem", fontWeight: 900, color: "white", letterSpacing: "-0.3px", textTransform: "uppercase" }}>XTS Secure Scanner</p>
+              <p style={{ fontSize: "0.65rem", color: "#a78bfa", fontWeight: 700, letterSpacing: "1px", textTransform: "uppercase" }}>Xavier TechByte Society</p>
             </div>
           </div>
         </header>
@@ -247,16 +245,13 @@ function VerifyInner() {
           {/* ── IDLE ── */}
           {state.mode === "idle" && (
             <div style={{ animation: "xts-fadein 0.35s ease" }}>
-              <div style={{ textAlign: "center", marginBottom: 28 }}>
-                <div style={{ width: 80, height: 80, borderRadius: 22, background: "linear-gradient(135deg,rgba(99,130,255,0.15),rgba(167,139,250,0.15))", border: "1px solid rgba(99,130,255,0.25)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
-                  <svg width="36" height="36" viewBox="0 0 24 24" fill="none" stroke="#6382ff" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-                    <path d="M23 7V1h-6M1 7V1h6M1 17v6h6M23 17v6h-6"/>
-                    <rect x="7" y="7" width="10" height="10" rx="2"/>
-                  </svg>
+              <div style={{ textAlign: "center", marginBottom: 28, background: "radial-gradient(circle at top right, #0f172a, #020617)", border: "1px solid rgba(99, 130, 255, 0.2)", borderRadius: 24, padding: "32px 20px", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)" }}>
+                <div style={{ width: 70, height: 70, borderRadius: 20, background: "linear-gradient(135deg,rgba(99,130,255,0.15),rgba(167,139,250,0.15))", border: "1px solid rgba(99,130,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                  <QrCode size={32} color="#6382ff" />
                 </div>
-                <h1 style={{ fontSize: "1.4rem", fontWeight: 900, color: "white", marginBottom: 8 }}>Scan Participant QR</h1>
-                <p style={{ fontSize: "0.85rem", color: "#64748b", lineHeight: 1.6 }}>
-                  Point the camera at a participant's QR code to verify check-in and unlock interview options.
+                <h1 style={{ margin: "6px 0 0", fontSize: "1.5rem", fontWeight: 900, color: "white" }}>SECURE DECRYPT</h1>
+                <p style={{ fontSize: "0.85rem", color: "#94a3b8", lineHeight: 1.6, marginTop: 12, padding: "0 10px" }}>
+                  Only this official XTS scanner can read the encrypted entry tickets. Point the camera at a participant's QR code.
                 </p>
               </div>
 
@@ -265,62 +260,60 @@ function VerifyInner() {
                 onClick={startScanning}
                 disabled={!scannerReady}
                 style={{ width: "100%", padding: "16px", borderRadius: 14, background: "linear-gradient(135deg,#6382ff,#a78bfa)", color: "white", fontSize: "1rem", fontWeight: 800, border: "none", cursor: scannerReady ? "pointer" : "not-allowed", opacity: scannerReady ? 1 : 0.6, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 6px 30px rgba(99,130,255,0.4)", transition: "transform 0.15s, box-shadow 0.15s", letterSpacing: "-0.2px" }}
+                onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.02)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
               >
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <path d="M23 7V1h-6M1 7V1h6M1 17v6h6M23 17v6h-6"/><rect x="7" y="7" width="10" height="10" rx="2"/>
-                </svg>
-                {scannerReady ? "Open Camera & Scan" : "Loading Scanner…"}
+                <ScanLine size={20} />
+                {scannerReady ? "Initialize Scanner" : "Loading Systems…"}
               </button>
-
-              {/* Instructions list */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10, marginTop: 20 }}>
-                {[
-                  { icon: "📱", title: "Mobile Ready", desc: "Use on any smartphone device" },
-                  { icon: "⚡", title: "Verify Scan", desc: "Auto-registers attendance" },
-                  { icon: "💬", title: "Interview Status", desc: "Track candidate process" },
-                  { icon: "✅", title: "Complete", desc: "Mark interviews done on site" },
-                ].map(({ icon, title, desc }) => (
-                  <div key={title} style={{ background: "#0d1526", border: "1px solid rgba(99,130,255,0.1)", borderRadius: 12, padding: "14px 12px" }}>
-                    <p style={{ fontSize: "1.3rem", marginBottom: 5 }}>{icon}</p>
-                    <p style={{ fontSize: "0.78rem", fontWeight: 700, color: "white", marginBottom: 3 }}>{title}</p>
-                    <p style={{ fontSize: "0.7rem", color: "#475569" }}>{desc}</p>
-                  </div>
-                ))}
-              </div>
             </div>
           )}
 
           {/* ── SCANNING ── */}
           {state.mode === "scanning" && (
-            <div style={{ animation: "xts-fadein 0.3s ease" }}>
-              <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 14 }}>
-                <div>
-                  <p style={{ fontSize: "1rem", fontWeight: 700, color: "white" }}>Camera Active</p>
-                  <p style={{ fontSize: "0.72rem", color: "#64748b" }}>Align the QR code within the frame</p>
+            <div style={{ animation: "xts-fadein 0.3s ease", display: "flex", flexDirection: "column", alignItems: "center" }}>
+              <div style={{ width: "100%", display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 16 }}>
+                <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <ShieldCheck size={24} color="#a78bfa" style={{ animation: "xts-pulse 2s infinite" }} />
+                  <div>
+                    <p style={{ fontSize: "1rem", fontWeight: 800, color: "white", textTransform: "uppercase", letterSpacing: "0.5px" }}>Decrypting Area</p>
+                    <p style={{ fontSize: "0.72rem", color: "#a78bfa", fontWeight: 600 }}>Awaiting XTS Encrypted QR</p>
+                  </div>
                 </div>
                 <button
                   onClick={cancelScanning}
-                  style={{ padding: "7px 14px", borderRadius: 8, background: "rgba(251,113,133,0.1)", border: "1px solid rgba(251,113,133,0.3)", color: "#fb7185", fontSize: "0.78rem", fontWeight: 700, cursor: "pointer", fontFamily: "inherit" }}
+                  style={{ padding: "8px 16px", borderRadius: 10, background: "rgba(251,113,133,0.1)", border: "1px solid rgba(251,113,133,0.3)", color: "#fb7185", fontSize: "0.8rem", fontWeight: 700, cursor: "pointer", transition: "all 0.2s" }}
                 >
                   Cancel
                 </button>
               </div>
 
-              {/* Viewfinder */}
-              <div style={{ position: "relative", borderRadius: 16, overflow: "hidden", background: "#000", border: "1px solid rgba(99,130,255,0.2)" }}>
+              {/* High-Tech Viewfinder */}
+              <div style={{ position: "relative", width: "100%", borderRadius: 24, overflow: "hidden", background: "#020617", border: "2px solid rgba(99,130,255,0.3)", boxShadow: "0 0 40px rgba(99,130,255,0.15), inset 0 0 20px rgba(99,130,255,0.2)" }}>
+                
                 <div ref={scannerRef} id="xts-qr-reader" style={{ minHeight: 320 }} />
-                {/* Corner markers */}
+                
+                {/* HUD Overlay Darkener */}
+                <div style={{ position: "absolute", inset: 0, pointerEvents: "none", zIndex: 10, border: "25px solid rgba(2,6,23,0.6)" }} />
+                
+                {/* HUD Target Brackets */}
                 {[
-                  { top: 0, left: 0, borderTop: "3px solid", borderLeft: "3px solid", borderRadius: "12px 0 0 0" },
-                  { top: 0, right: 0, borderTop: "3px solid", borderRight: "3px solid", borderRadius: "0 12px 0 0" },
-                  { bottom: 0, left: 0, borderBottom: "3px solid", borderLeft: "3px solid", borderRadius: "0 0 0 12px" },
-                  { bottom: 0, right: 0, borderBottom: "3px solid", borderRight: "3px solid", borderRadius: "0 0 12px 0" },
+                  { top: 40, left: 40, borderTop: "4px solid", borderLeft: "4px solid", borderRadius: "8px 0 0 0" },
+                  { top: 40, right: 40, borderTop: "4px solid", borderRight: "4px solid", borderRadius: "0 8px 0 0" },
+                  { bottom: 40, left: 40, borderBottom: "4px solid", borderLeft: "4px solid", borderRadius: "0 0 0 8px" },
+                  { bottom: 40, right: 40, borderBottom: "4px solid", borderRight: "4px solid", borderRadius: "0 0 8px 0" },
                 ].map((s, i) => (
-                  <div key={i} style={{ position: "absolute", width: 28, height: 28, animation: "corner-anim 2s ease infinite", borderColor: "#6382ff", ...s }} />
+                  <div key={i} style={{ position: "absolute", width: 40, height: 40, borderColor: "#6382ff", boxShadow: "inset 0 0 10px rgba(99,130,255,0.3)", zIndex: 11, ...s }} />
                 ))}
-                {/* Scan line */}
-                <div style={{ position: "absolute", inset: "5%", display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none" }}>
-                  <div style={{ width: "60%", height: 2, background: "linear-gradient(90deg,transparent,#6382ff,transparent)", animation: "xts-pulse 1.5s ease infinite", borderRadius: 1 }} />
+
+                {/* Laser line */}
+                <div style={{ position: "absolute", inset: 0, display: "flex", alignItems: "center", justifyContent: "center", pointerEvents: "none", zIndex: 12 }}>
+                  <div style={{ width: "90%", height: 3, background: "#a78bfa", boxShadow: "0 0 15px 4px rgba(167,139,250,0.8)", animation: "xts-laser 2s ease-in-out infinite", borderRadius: "50%" }} />
+                </div>
+                
+                {/* Text inside the scanner */}
+                <div style={{ position: "absolute", bottom: 12, left: 0, right: 0, textAlign: "center", zIndex: 12 }}>
+                  <p style={{ fontSize: "0.7rem", color: "#a78bfa", fontWeight: 800, letterSpacing: "2px", textTransform: "uppercase" }}>Target Lock Engaged</p>
                 </div>
               </div>
             </div>
@@ -426,7 +419,9 @@ function VerifyInner() {
           {state.mode === "error" && (
             <div style={{ animation: "xts-pop 0.35s ease" }}>
               <div style={{ borderRadius: 18, padding: "24px 20px", background: "rgba(251,113,133,0.06)", border: "1px solid rgba(251,113,133,0.25)", textAlign: "center", marginBottom: 16 }}>
-                <div style={{ fontSize: "2.5rem", marginBottom: 12 }}>❌</div>
+                <div style={{ marginBottom: 12, display: "flex", justifyContent: "center" }}>
+                  <AlertCircle size={48} color="#fb7185" />
+                </div>
                 <p style={{ fontSize: "1.1rem", fontWeight: 800, color: "white", marginBottom: 6 }}>Scan Failed</p>
                 <p style={{ fontSize: "0.85rem", color: "#fb7185", lineHeight: 1.5 }}>{state.message}</p>
               </div>
