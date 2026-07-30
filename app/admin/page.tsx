@@ -102,11 +102,11 @@ function toWhatsAppNumber(phone: string): string {
   return digits;
 }
 
-function buildVerifyUrl(token: string): string {
+function buildTicketUrl(token: string): string {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL ||
     (typeof window !== "undefined" ? window.location.origin : "http://localhost:3000");
-  return `${base}/verify?token=${token}`;
+  return `${base}/ticket?token=${token}`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -255,13 +255,26 @@ function QRModal({
   const [copied, setCopied] = useState(false);
   const [sharing, setSharing] = useState(false);
   const [sharePhone, setSharePhone] = useState(reg.phone);
+  const [qrPayload, setQrPayload] = useState<string | null>(null);
 
-  const verifyUrl = reg.qrToken ? buildVerifyUrl(reg.qrToken) : null;
+  useEffect(() => {
+    if (reg.qrToken) {
+      fetch(`/api/ticket/qr-payload?token=${reg.qrToken}`)
+        .then((res) => res.json())
+        .then((data) => {
+          if (data.success) {
+            setQrPayload(data.payload);
+          }
+        });
+    }
+  }, [reg.qrToken]);
+
+  const ticketUrl = reg.qrToken ? buildTicketUrl(reg.qrToken) : null;
 
   const waNumber = toWhatsAppNumber(sharePhone);
-  const waMessage = verifyUrl
+  const waMessage = ticketUrl
     ? encodeURIComponent(
-        `🌟 *Xavier TechByte Society Recruitment '26* 🌟\n\nHello *${reg.fullName}*,\n\nYour registration is confirmed! Below is your unique entry key for the interview stage.\n\n📅 *Status*: Ready for Interview\n🔑 *Your Entry QR Code Link*:\n${verifyUrl}\n\n*Instructions*:\n1. Open the link above to view your ticket and QR code.\n2. Show the QR code to the venue checker on arrival.\n\nSee you there! All the best! 🚀`
+        `🌟 *Xavier TechByte Society Recruitment '26* 🌟\n\nHello *${reg.fullName}*,\n\nYour registration is confirmed! Below is your unique entry key for the interview stage.\n\n📅 *Status*: Ready for Interview\n🔑 *Your Entry QR Code Link*:\n${ticketUrl}\n\n*Instructions*:\n1. Open the link above to view your ticket and QR code.\n2. Show the QR code to the venue checker on arrival.\n\nSee you there! All the best! 🚀`
       )
     : "";
   const waLink = `https://wa.me/${waNumber}?text=${waMessage}`;
@@ -273,7 +286,7 @@ function QRModal({
   }
 
   async function handleDownload(): Promise<string | null> {
-    if (!verifyUrl) return null;
+    if (!qrPayload) return null;
     const svgEl = document.getElementById("xts-qr-svg");
     if (!svgEl) return null;
     const svgData = new XMLSerializer().serializeToString(svgEl);
@@ -288,7 +301,7 @@ function QRModal({
   }
 
   async function handleShareImage() {
-    if (!verifyUrl) return;
+    if (!qrPayload) return;
     setSharing(true);
 
     try {
@@ -328,7 +341,7 @@ function QRModal({
                 await navigator.share({
                   files: [file],
                   title: `${reg.fullName} QR Code`,
-                  text: `🌟 *Xavier TechByte Society Recruitment '26* 🌟\n\nHello *${reg.fullName}*,\n\nYour registration is confirmed! Below is your entry link:\n${verifyUrl}`,
+                  text: `🌟 *Xavier TechByte Society Recruitment '26* 🌟\n\nHello *${reg.fullName}*,\n\nYour registration is confirmed! Below is your entry link:\n${ticketUrl}`,
                 });
               } catch (shareErr) {
                 console.error("Web Share failed, falling back to URL chat link:", shareErr);
@@ -355,8 +368,8 @@ function QRModal({
   }
 
   async function handleCopy() {
-    if (!verifyUrl) return;
-    await navigator.clipboard.writeText(verifyUrl);
+    if (!ticketUrl) return;
+    await navigator.clipboard.writeText(ticketUrl);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
   }
@@ -436,7 +449,7 @@ function QRModal({
           <div style={{ background: "white", borderRadius: 20, padding: 18, boxShadow: "0 8px 40px rgba(0,0,0,0.6)", position: "relative" }}>
             <QRCodeSVG
               id="xts-qr-svg"
-              value={verifyUrl!}
+              value={qrPayload || "INVALID-NO-PAYLOAD"}
               size={200}
               level="H"
               includeMargin={false}
@@ -456,7 +469,7 @@ function QRModal({
             title="Click to copy"
           >
             <Link2 size={13} color="#6382ff" style={{ flexShrink: 0 }} />
-            <span style={{ fontSize: "0.72rem", color: "#64748b", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{verifyUrl}</span>
+            <span style={{ fontSize: "0.72rem", color: "#64748b", flex: 1, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{ticketUrl}</span>
             <span style={{ fontSize: "0.68rem", fontWeight: 700, color: copied ? "#34d399" : "#6382ff", flexShrink: 0, transition: "color 0.2s" }}>
               {copied ? "Copied!" : "Copy"}
             </span>
