@@ -40,6 +40,7 @@ export async function GET(req: NextRequest) {
         team: registration.team,
         time: registration.time,
         venue: registration.venue,
+        qrToken: registration.qrToken,
         status: registration.status,
         verified: registration.verified,
         interviewDone: registration.interviewDone || false,

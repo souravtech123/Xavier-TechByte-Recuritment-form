@@ -115,7 +115,10 @@ function TicketInner() {
   }
 
   const qrValue = data.qrToken && origin ? `${origin}/verify?token=${data.qrToken}` : `INVALID-NO-PAYLOAD`;
-
+  console.log(qrValue)
+  console.log("Origin:", origin);
+console.log("QR Token:", data?.qrToken);
+console.log("Data:", data);
   return (
     <div style={{ minHeight: "100vh", background: "#020617", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px" }}>
       <style>{`
