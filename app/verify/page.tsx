@@ -266,15 +266,15 @@ function VerifyInner() {
                 <div style={{ width: 70, height: 70, borderRadius: 20, background: "linear-gradient(135deg,rgba(99,130,255,0.15),rgba(167,139,250,0.15))", border: "1px solid rgba(99,130,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
                   <Lock size={32} color="#6382ff" />
                 </div>
-                <h1 style={{ margin: "6px 0 0", fontSize: "1.5rem", fontWeight: 900, color: "white" }}>UNIQUE ID</h1>
+                <h1 style={{ margin: "6px 0 0", fontSize: "1.5rem", fontWeight: 900, color: "white" }}>CHECK-IN PASSWORD</h1>
                 <p style={{ fontSize: "0.85rem", color: "#94a3b8", lineHeight: 1.6, marginTop: 12, padding: "0 10px" }}>
-                  Please enter the Admin Unique ID to authorize this ticket check-in.
+                  Please enter the admin password to authorize this ticket check-in.
                 </p>
                 <input
                   type="password"
                   value={uniqueId}
                   onChange={(e) => setUniqueId(e.target.value)}
-                  placeholder="Enter Unique ID"
+                  placeholder="Enter Password"
                   style={{ marginTop: 20, width: "100%", padding: "12px", borderRadius: 10, border: "1px solid rgba(99, 130, 255, 0.3)", background: "#020617", color: "white", outline: "none", textAlign: "center", fontSize: "1rem" }}
                 />
               </div>

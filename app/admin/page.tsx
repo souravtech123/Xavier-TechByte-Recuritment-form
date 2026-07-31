@@ -269,6 +269,7 @@ function QRModal({
   }, [reg.qrToken]);
 
   const ticketUrl = reg.qrToken ? buildTicketUrl(reg.qrToken) : null;
+  const verifyUrl = reg.qrToken ? ticketUrl?.replace("/ticket", "/verify") : null;
 
   const waNumber = toWhatsAppNumber(sharePhone);
   const waMessage = ticketUrl
@@ -446,7 +447,7 @@ function QRModal({
           <div style={{ background: "white", borderRadius: 20, padding: 18, boxShadow: "0 8px 40px rgba(0,0,0,0.6)", position: "relative" }}>
             <QRCodeSVG
               id="xts-qr-svg"
-              value={ticketUrl || "INVALID-NO-PAYLOAD"}
+              value={verifyUrl || "INVALID-NO-PAYLOAD"}
               size={200}
               level="H"
               includeMargin={false}

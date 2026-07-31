@@ -27,10 +27,7 @@ function TicketInner() {
   const [data, setData] = useState<TicketData | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
 
-  const [origin, setOrigin] = useState("");
-
   useEffect(() => {
-    setOrigin(window.location.origin);
     const token = searchParams.get("token");
     if (!token) {
       setError("Ticket token is missing in the URL.");
@@ -115,7 +112,8 @@ function TicketInner() {
     );
   }
 
-  const qrValue = data.qrToken ? `${origin}/verify?token=${data.qrToken}` : `INVALID-NO-PAYLOAD`;
+  const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
+  const qrValue = data.qrToken && currentOrigin ? `${currentOrigin}/verify?token=${data.qrToken}` : `INVALID-NO-PAYLOAD`;
 
   return (
     <div style={{ minHeight: "100vh", background: "#020617", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px" }}>
