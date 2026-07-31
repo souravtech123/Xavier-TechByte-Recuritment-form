@@ -65,34 +65,22 @@ export async function POST(req: Request) {
     await connectDB();
 
     const body = await req.json();
-    const { action } = body;
+    const { action, uniqueId, token } = body;
 
-    let token: string;
-
-    if (body.payload) {
-      // ── New encrypted path ──────────────────────────────────────────────
-      const decrypted = decryptPayload(body.payload);
-      if (!decrypted) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "❌ QR Invalid — This QR code cannot be read by this scanner. Please use the official XTS scanner.",
-          },
-          { status: 400 }
-        );
-      }
-      token = decrypted;
-    } else if (body.token) {
-      // ── Legacy direct-URL path ──────────────────────────────────────────
-      token = body.token;
-    } else {
+    const expectedUniqueId = process.env.ADMIN_UNIQUE_ID || "12345";
+    if (uniqueId !== expectedUniqueId) {
       return NextResponse.json(
-        { success: false, message: "Token or payload is required." },
-        { status: 400 }
+        { success: false, message: "Invalid Unique ID. Check-in denied." },
+        { status: 401 }
       );
     }
 
+    if (!token) {
+      return NextResponse.json(
+        { success: false, message: "Token is required." },
+        { status: 400 }
+      );
+    }
     const registration = await Registration.findOne({ qrToken: token });
 
     if (!registration) {

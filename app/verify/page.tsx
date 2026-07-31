@@ -25,7 +25,8 @@ type VerifyState =
   | { mode: "scanning" }
   | { mode: "loading"; text?: string }
   | { mode: "success"; data: ParticipantData; alreadyVerified: boolean }
-  | { mode: "error"; message: string };
+  | { mode: "error"; message: string }
+  | { mode: "auth"; token: string };
 
 /* ------------------------------------------------------------------ */
 /* Inner component (uses useSearchParams — must be inside Suspense)   */
@@ -34,9 +35,7 @@ type VerifyState =
 function VerifyInner() {
   const searchParams = useSearchParams();
   const [state, setState] = useState<VerifyState>({ mode: "idle" });
-  // scannedPayload holds the raw encrypted string from the QR
-  const [scannedPayload, setScannedPayload] = useState<string>("");
-  // resolvedToken holds the UUID returned by the server after decrypt (for interview-done call)
+  const [uniqueId, setUniqueId] = useState("");
   const [resolvedToken, setResolvedToken] = useState<string>("");
   const scannerRef = useRef<HTMLDivElement>(null);
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -47,8 +46,7 @@ function VerifyInner() {
   useEffect(() => {
     const token = searchParams.get("token");
     if (token) {
-      // Legacy path: token in URL — verify directly
-      verifyPayload(token, true);
+      setState({ mode: "auth", token });
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -104,21 +102,12 @@ function VerifyInner() {
               scanner = null;
             }
 
-            // The QR now encodes a URL pointing to /invalid-qr?data=...
-            // If we scan it with this official scanner, we extract the payload.
-            // If someone scans with Google Lens, it just opens the "Invalid Scanner" webpage!
-            let extractedPayload = decodedText;
-            if (decodedText.includes("data=")) {
-              extractedPayload = decodedText.split("data=")[1];
+            let extractedToken = decodedText;
+            if (decodedText.includes("token=")) {
+              extractedToken = decodedText.split("token=")[1].split("&")[0];
             }
-
-            setScannedPayload(extractedPayload);
             
-            // Artificial 4.5-second decryption simulation to enhance the "XTS Scanner" feel
-            setState({ mode: "loading", text: "Decrypting XTS Payload…" });
-            await new Promise(resolve => setTimeout(resolve, 4500));
-
-            await verifyPayload(extractedPayload, false);
+            setState({ mode: "auth", token: extractedToken });
           },
           () => { /* ignore frame errors */ }
         );
@@ -145,25 +134,20 @@ function VerifyInner() {
   }, [state.mode]);
 
   /* ---- Verify payload via API ---- */
-  // isLegacyToken: true means the value is a raw UUID from a URL (legacy)
-  //                false means it's an encrypted QR payload (new flow)
-  async function verifyPayload(value: string, isLegacyToken: boolean) {
+  async function verifyPayload() {
+    if (state.mode !== "auth") return;
+    const { token } = state;
     setState({ mode: "loading", text: "Updating Database…" });
     try {
-      const body = isLegacyToken
-        ? { token: value }          // legacy URL path
-        : { payload: value };       // encrypted QR path
-
       const res = await fetch("/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ token, uniqueId }),
       });
       const json = await res.json();
       if (!json.success) {
         setState({ mode: "error", message: json.message || "Verification failed." });
       } else {
-        // Server returns the resolved token so we can call completeInterview later
         if (json.resolvedToken) setResolvedToken(json.resolvedToken);
         setState({ mode: "success", data: json.data, alreadyVerified: json.alreadyVerified });
       }
@@ -174,19 +158,14 @@ function VerifyInner() {
 
   /* ---- Complete Interview Flow ---- */
   async function completeInterview() {
-    // Use resolvedToken (from server after decrypt) for the interview-done call
-    const tokenToUse = resolvedToken || scannedPayload;
+    const tokenToUse = resolvedToken;
     if (!tokenToUse) return;
     setState({ mode: "loading", text: "Marking Complete…" });
     try {
-      const body = resolvedToken
-        ? { token: resolvedToken, action: "done" }   // have the resolved UUID
-        : { payload: scannedPayload, action: "done" }; // fallback: send payload again
-
       const res = await fetch("/api/verify", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
+        body: JSON.stringify({ token: tokenToUse, uniqueId, action: "done" }),
       });
       const json = await res.json();
       if (!json.success) {
@@ -209,7 +188,7 @@ function VerifyInner() {
 
   function reset() {
     setState({ mode: "idle" });
-    setScannedPayload("");
+    setUniqueId("");
     setResolvedToken("");
   }
 
@@ -276,6 +255,44 @@ function VerifyInner() {
               >
                 <ScanLine size={20} />
                 {scannerReady ? "Initialize Scanner" : "Loading Systems…"}
+              </button>
+            </div>
+          )}
+
+          {/* ── AUTH ── */}
+          {state.mode === "auth" && (
+            <div style={{ animation: "xts-fadein 0.35s ease" }}>
+              <div style={{ textAlign: "center", marginBottom: 28, background: "radial-gradient(circle at top right, #0f172a, #020617)", border: "1px solid rgba(99, 130, 255, 0.2)", borderRadius: 24, padding: "32px 20px", boxShadow: "0 25px 50px -12px rgba(0, 0, 0, 0.5)" }}>
+                <div style={{ width: 70, height: 70, borderRadius: 20, background: "linear-gradient(135deg,rgba(99,130,255,0.15),rgba(167,139,250,0.15))", border: "1px solid rgba(99,130,255,0.3)", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 16px" }}>
+                  <Lock size={32} color="#6382ff" />
+                </div>
+                <h1 style={{ margin: "6px 0 0", fontSize: "1.5rem", fontWeight: 900, color: "white" }}>UNIQUE ID</h1>
+                <p style={{ fontSize: "0.85rem", color: "#94a3b8", lineHeight: 1.6, marginTop: 12, padding: "0 10px" }}>
+                  Please enter the Admin Unique ID to authorize this ticket check-in.
+                </p>
+                <input
+                  type="password"
+                  value={uniqueId}
+                  onChange={(e) => setUniqueId(e.target.value)}
+                  placeholder="Enter Unique ID"
+                  style={{ marginTop: 20, width: "100%", padding: "12px", borderRadius: 10, border: "1px solid rgba(99, 130, 255, 0.3)", background: "#020617", color: "white", outline: "none", textAlign: "center", fontSize: "1rem" }}
+                />
+              </div>
+
+              <button
+                onClick={verifyPayload}
+                disabled={!uniqueId}
+                style={{ width: "100%", padding: "16px", borderRadius: 14, background: "linear-gradient(135deg,#6382ff,#a78bfa)", color: "white", fontSize: "1rem", fontWeight: 800, border: "none", cursor: uniqueId ? "pointer" : "not-allowed", opacity: uniqueId ? 1 : 0.6, display: "flex", alignItems: "center", justifyContent: "center", gap: 10, boxShadow: "0 6px 30px rgba(99,130,255,0.4)" }}
+              >
+                <CheckCircle2 size={20} />
+                Authorize & Check-In
+              </button>
+              
+              <button
+                onClick={reset}
+                style={{ width: "100%", padding: "14px", borderRadius: 12, background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.12)", color: "#e2e8f0", fontSize: "0.95rem", fontWeight: 700, cursor: "pointer", marginTop: 12 }}
+              >
+                Cancel
               </button>
             </div>
           )}

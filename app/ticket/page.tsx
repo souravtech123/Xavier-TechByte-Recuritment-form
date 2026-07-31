@@ -13,6 +13,9 @@ interface TicketData {
   semester: string;
   interest: string;
   skills: string;
+  team?: string;
+  time?: string;
+  venue?: string;
   status: string;
   qrToken: string;
 }
@@ -22,8 +25,6 @@ function TicketInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<TicketData | null>(null);
-  // Encrypted QR payload — only the XTS /verify scanner can decode this
-  const [qrPayload, setQrPayload] = useState<string | null>(null);
   const ticketRef = useRef<HTMLDivElement>(null);
 
   const [origin, setOrigin] = useState("");
@@ -48,16 +49,6 @@ function TicketInner() {
           return;
         }
         setData(json.data);
-
-        // 2. Fetch the encrypted QR payload from the server
-        //    This payload is what gets baked into the QR code.
-        //    Any other QR scanner will see random encrypted text — only
-        //    the XTS /verify page can decrypt and use it.
-        const payloadRes = await fetch(`/api/ticket/qr-payload?token=${token}`);
-        const payloadJson = await payloadRes.json();
-        if (payloadJson.success) {
-          setQrPayload(payloadJson.payload);
-        }
       } catch {
         setError("Failed to load ticket information.");
       } finally {
@@ -124,9 +115,7 @@ function TicketInner() {
     );
   }
 
-  // qrPayload is the encrypted blob. We wrap it in a URL so generic scanners
-  // are redirected to a helpful "Invalid Scanner" page instead of showing raw text.
-  const qrValue = qrPayload ? `${origin}/invalid-qr?data=${qrPayload}` : `INVALID-NO-PAYLOAD`;
+  const qrValue = data.qrToken ? `${origin}/verify?token=${data.qrToken}` : `INVALID-NO-PAYLOAD`;
 
   return (
     <div style={{ minHeight: "100vh", background: "#020617", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px" }}>
@@ -190,7 +179,7 @@ function TicketInner() {
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 20, fontSize: "0.65rem", color: "#a78bfa", fontWeight: 600 }}>
           <Lock size={10} color="#a78bfa" />
-          Scan only with the official XTS scanner
+          Scan with any QR scanner to verify
         </div>
 
         {/* Candidate Details */}
@@ -217,10 +206,27 @@ function TicketInner() {
             <p style={{ margin: "2px 0 0", fontSize: "0.85rem", fontWeight: 700, color: "#a78bfa" }}>{data.interest}</p>
           </div>
 
+          {(data.team || data.time || data.venue) && (
+            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, borderTop: "1px dashed rgba(99, 130, 255, 0.2)", paddingTop: 16 }}>
+              {data.team && (
+                <div>
+                  <span style={{ fontSize: "0.65rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "1px" }}>Team</span>
+                  <p style={{ margin: "2px 0 0", fontSize: "0.85rem", fontWeight: 700, color: "#cbd5e1" }}>{data.team}</p>
+                </div>
+              )}
+              {data.venue && (
+                <div>
+                  <span style={{ fontSize: "0.65rem", color: "#64748b", textTransform: "uppercase", letterSpacing: "1px" }}>Venue</span>
+                  <p style={{ margin: "2px 0 0", fontSize: "0.85rem", fontWeight: 700, color: "#cbd5e1" }}>{data.venue}</p>
+                </div>
+              )}
+            </div>
+          )}
+
           <div style={{ borderTop: "1px dashed rgba(99, 130, 255, 0.2)", padding: "16px 0 0", display: "flex", flexDirection: "column", gap: 8 }}>
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.75rem", color: "#94a3b8" }}>
               <Clock size={12} color="#a78bfa" />
-              <span>Reporting: <b>10:00 AM onwards</b></span>
+              <span>Reporting: <b>{data.time || "10:00 AM onwards"}</b></span>
             </div>
             <div style={{ display: "flex", alignItems: "center", gap: 8, fontSize: "0.75rem", color: "#94a3b8" }}>
               <ShieldCheck size={12} color="#34d399" />

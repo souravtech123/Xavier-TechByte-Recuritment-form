@@ -52,6 +52,9 @@ export async function POST(req: Request) {
       skills,
       whyJoin,
       portfolio,
+      team,
+      time,
+      venue,
     } = body;
 
     if (
@@ -91,6 +94,9 @@ export async function POST(req: Request) {
       skills,
       whyJoin,
       portfolio,
+      team,
+      time,
+      venue,
       qrToken,
       verified: false,
     });

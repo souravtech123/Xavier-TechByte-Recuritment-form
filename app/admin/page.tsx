@@ -49,6 +49,9 @@ interface Registration {
   skills: string;
   whyJoin?: string;
   portfolio?: string;
+  team?: string;
+  time?: string;
+  venue?: string;
   status: "Pending" | "Selected" | "Rejected";
   qrToken?: string;
   verified: boolean;
@@ -68,6 +71,9 @@ const EMPTY_FORM: Omit<Registration, "_id" | "createdAt" | "verified" | "intervi
   skills: "",
   whyJoin: "",
   portfolio: "",
+  team: "",
+  time: "",
+  venue: "",
   status: "Pending",
   qrToken: undefined,
 };
@@ -260,15 +266,6 @@ function QRModal({
 
   useEffect(() => {
     setOrigin(window.location.origin);
-    if (reg.qrToken) {
-      fetch(`/api/ticket/qr-payload?token=${reg.qrToken}`)
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.success) {
-            setQrPayload(data.payload);
-          }
-        });
-    }
   }, [reg.qrToken]);
 
   const ticketUrl = reg.qrToken ? buildTicketUrl(reg.qrToken) : null;
@@ -288,7 +285,6 @@ function QRModal({
   }
 
   async function handleDownload(): Promise<string | null> {
-    if (!qrPayload) return null;
     const svgEl = document.getElementById("xts-qr-svg");
     if (!svgEl) return null;
     const svgData = new XMLSerializer().serializeToString(svgEl);
@@ -303,7 +299,6 @@ function QRModal({
   }
 
   async function handleShareImage() {
-    if (!qrPayload) return;
     setSharing(true);
 
     try {
@@ -451,7 +446,7 @@ function QRModal({
           <div style={{ background: "white", borderRadius: 20, padding: 18, boxShadow: "0 8px 40px rgba(0,0,0,0.6)", position: "relative" }}>
             <QRCodeSVG
               id="xts-qr-svg"
-              value={qrPayload ? `${origin}/invalid-qr?data=${qrPayload}` : "INVALID-NO-PAYLOAD"}
+              value={ticketUrl || "INVALID-NO-PAYLOAD"}
               size={200}
               level="H"
               includeMargin={false}
@@ -623,6 +618,18 @@ function RegForm({
       <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
         <FField label="Portfolio / GitHub" icon={Link2}>
           <input style={inputStyle} value={form.portfolio} onChange={(e) => set("portfolio", e.target.value)} placeholder="https://github.com/..." />
+        </FField>
+        <FField label="Team" icon={Users}>
+          <input style={inputStyle} value={form.team} onChange={(e) => set("team", e.target.value)} placeholder="e.g. Design Team" />
+        </FField>
+      </div>
+
+      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 14 }}>
+        <FField label="Time" icon={Clock}>
+          <input style={inputStyle} value={form.time} onChange={(e) => set("time", e.target.value)} placeholder="e.g. 10:00 AM" />
+        </FField>
+        <FField label="Venue" icon={Layers}>
+          <input style={inputStyle} value={form.venue} onChange={(e) => set("venue", e.target.value)} placeholder="e.g. Room 302" />
         </FField>
         <FField label="Status" icon={Layers}>
           <div style={{ position: "relative" }}>
@@ -1257,6 +1264,9 @@ export default function AdminPortal() {
             <DRow icon={BookOpen} label="Semester" value={viewItem.semester} />
             <DRow icon={Star} label="Interest" value={viewItem.interest} />
             <DRow icon={Wrench} label="Skills" value={viewItem.skills} />
+            <DRow icon={Users} label="Team" value={viewItem.team} />
+            <DRow icon={Clock} label="Time" value={viewItem.time} />
+            <DRow icon={Layers} label="Venue" value={viewItem.venue} />
           </div>
           {viewItem.whyJoin && <div style={{ marginTop: 10 }}><DRow icon={MessageSquare} label="Why Join?" value={viewItem.whyJoin} /></div>}
           {viewItem.portfolio && (
@@ -1339,7 +1349,7 @@ export default function AdminPortal() {
       {editItem && (
         <Modal title="Edit Registration" onClose={() => setEditItem(null)}>
           <RegForm
-            initial={{ fullName: editItem.fullName, email: editItem.email, phone: editItem.phone, course: editItem.course, semester: editItem.semester, interest: editItem.interest, skills: editItem.skills, whyJoin: editItem.whyJoin ?? "", portfolio: editItem.portfolio ?? "", status: editItem.status, qrToken: editItem.qrToken }}
+            initial={{ fullName: editItem.fullName, email: editItem.email, phone: editItem.phone, course: editItem.course, semester: editItem.semester, interest: editItem.interest, skills: editItem.skills, whyJoin: editItem.whyJoin ?? "", portfolio: editItem.portfolio ?? "", team: editItem.team ?? "", time: editItem.time ?? "", venue: editItem.venue ?? "", status: editItem.status, qrToken: editItem.qrToken }}
             onSubmit={handleEdit}
             submitLabel="Save Changes"
             loading={submitting}

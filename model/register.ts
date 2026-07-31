@@ -10,6 +10,9 @@ export interface IRegistration extends Document {
   skills: string;
   whyJoin?: string;
   portfolio?: string;
+  team?: string;
+  time?: string;
+  venue?: string;
   status: "Pending" | "Selected" | "Rejected";
   qrToken?: string;
   verified: boolean;
@@ -64,6 +67,21 @@ const RegistrationSchema = new Schema<IRegistration>(
     },
 
     portfolio: {
+      type: String,
+      default: "",
+    },
+
+    team: {
+      type: String,
+      default: "",
+    },
+
+    time: {
+      type: String,
+      default: "",
+    },
+
+    venue: {
       type: String,
       default: "",
     },
