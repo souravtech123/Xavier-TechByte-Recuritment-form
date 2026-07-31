@@ -25,9 +25,11 @@ function TicketInner() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [data, setData] = useState<TicketData | null>(null);
+  const [origin, setOrigin] = useState("");
   const ticketRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    setOrigin(window.location.origin);
     const token = searchParams.get("token");
     if (!token) {
       setError("Ticket token is missing in the URL.");
@@ -112,8 +114,7 @@ function TicketInner() {
     );
   }
 
-  const currentOrigin = typeof window !== "undefined" ? window.location.origin : "";
-  const qrValue = data.qrToken && currentOrigin ? `${currentOrigin}/verify?token=${data.qrToken}` : `INVALID-NO-PAYLOAD`;
+  const qrValue = data.qrToken && origin ? `${origin}/verify?token=${data.qrToken}` : `INVALID-NO-PAYLOAD`;
 
   return (
     <div style={{ minHeight: "100vh", background: "#020617", display: "flex", flexDirection: "column", alignItems: "center", padding: "40px 20px" }}>
@@ -173,7 +174,7 @@ function TicketInner() {
 
         {/* QR Code — encrypted payload, only XTS scanner can read it */}
         <div style={{ background: "white", padding: 16, borderRadius: 16, marginBottom: 8, boxShadow: "0 8px 30px rgba(0,0,0,0.3)", position: "relative" }}>
-          <QRCodeSVG value={qrValue} size={180} level="H" bgColor="white" fgColor="#020617" />
+          <QRCodeSVG value={qrValue} size={180} level="M" includeMargin={true} bgColor="white" fgColor="#020617" />
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 5, marginBottom: 20, fontSize: "0.65rem", color: "#a78bfa", fontWeight: 600 }}>
           <Lock size={10} color="#a78bfa" />

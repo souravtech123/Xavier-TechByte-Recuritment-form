@@ -449,8 +449,8 @@ function QRModal({
               id="xts-qr-svg"
               value={verifyUrl || "INVALID-NO-PAYLOAD"}
               size={200}
-              level="H"
-              includeMargin={false}
+              level="M"
+              includeMargin={true}
               fgColor="#0f1623"
               bgColor="white"
             />
