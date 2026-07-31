@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/config/db";
 import Registration from "@/model/register";
-import { decryptPayload } from "@/lib/qrCrypto";
 
 // GET /api/verify?token=<qrToken> — look up a participant by token
 export async function GET(req: NextRequest) {
