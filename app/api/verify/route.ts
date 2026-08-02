@@ -70,7 +70,7 @@ export async function POST(req: Request) {
     const body = await req.json();
     const { action, uniqueId, token } = body;
 
-    const expectedUniqueId = process.env.ADMIN_UNIQUE_ID || "12345";
+    const expectedUniqueId = process.env.ADMIN_UNIQUE_ID || "souravxts20252026";
     if (uniqueId !== expectedUniqueId) {
       return NextResponse.json(
         { success: false, message: "Invalid Unique ID. Check-in denied." },
